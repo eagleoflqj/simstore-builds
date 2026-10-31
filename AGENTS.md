@@ -5,6 +5,7 @@
 - Write repository documentation in English. Keep each prose paragraph on one physical line; do not hard-wrap text at a fixed column width. Preserve structural line breaks in lists, tables, and code blocks.
 - Keep the README focused on the project's purpose. Do not add per-app build, dependency, installation, or test instructions. Keep agent instructions in this file. Do not put conversation history, milestone progress, or temporary validation results in either document.
 - Keep app-specific configuration and dependency lockfiles under `apps/<id>/`. Treat manifests and lockfiles as the source of version settings; avoid duplicating them in documentation or scripts.
+- Use Python for maintained parsing and validation tools. Keep Ruby limited to CocoaPods dependency setup.
 - Build and run CI for each app independently. Keep scripts and tests in the app's directory. Do not add a batch build entry point. Extract shared scripts only when at least two apps actually share an operation.
 - Pin upstream source to the full commit of a stable release and use that revision's required toolchain. Maintain necessary source changes as patches.
 - Support only Apple Silicon macOS and arm64 iOS Simulator apps. Do not produce x86_64 or Universal apps. Validate the Mach-O platform as well as the CPU architecture.

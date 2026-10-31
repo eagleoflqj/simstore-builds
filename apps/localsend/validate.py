@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Inspect actual App Bundle binaries. Does not certify Flutter build mode."""
 import argparse
-import json
 import os
 from pathlib import Path
 import plistlib
@@ -97,11 +96,12 @@ def validate(app):
 
 def check_manifest(path, info, binary_minimum):
     """Check app version and build/runtime floors against a valid recipe."""
-    reader = Path(__file__).with_name('manifest.rb')
+    from manifest import ManifestError, load_manifest
+
     try:
-        manifest = json.loads(run('ruby', str(reader), str(path)))
-    except subprocess.CalledProcessError as e:
-        raise InvalidBundle((e.stderr or e.output or str(e)).strip()) from e
+        manifest = load_manifest(path)
+    except ManifestError as e:
+        raise InvalidBundle(str(e)) from e
     release_version = manifest['source']['version'].removeprefix('v')
     app_version = info['CFBundleShortVersionString']
     if not re.fullmatch(r'\d+(?:\.\d+){0,2}', app_version):

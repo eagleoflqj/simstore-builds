@@ -3,18 +3,19 @@ import copy
 import json
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 
 APP = Path(__file__).resolve().parents[1]
-READER = APP / 'manifest.rb'
+READER = APP / 'manifest.py'
 
 
 class ManifestTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.recipe = json.loads(subprocess.check_output(
-            ['ruby', str(READER), str(APP / 'manifest.yaml')], text=True))
+            [sys.executable, str(READER), str(APP / 'manifest.yaml')], text=True))
 
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix='simstore-manifest-')
@@ -29,7 +30,7 @@ class ManifestTests(unittest.TestCase):
 
     def read(self, raw=None, field=None):
         self.path.write_text(json.dumps(self.data) if raw is None else raw)
-        args = ['ruby', str(READER), str(self.path)]
+        args = [sys.executable, str(READER), str(self.path)]
         if field:
             args += ['--field', field]
         return subprocess.run(args, capture_output=True, text=True)
@@ -130,6 +131,9 @@ class ManifestTests(unittest.TestCase):
     def test_duplicate_yaml_key_rejected(self):
         self.assert_rejected('Duplicate YAML', raw='id: localsend\nid: other\n')
 
+    def test_malformed_yaml_mapping_rejected(self):
+        self.assert_rejected('YAML mappings must contain key/value pairs', raw='!!map "invalid"\n')
+
     def test_multiple_documents_rejected(self):
         self.assert_rejected('exactly one YAML document', raw='---\nid: localsend\n---\nid: other\n')
 
@@ -137,7 +141,9 @@ class ManifestTests(unittest.TestCase):
         self.assert_rejected('aliases are not allowed', raw='id: &name localsend\nname: *name\n')
 
     def test_yaml_object_rejected(self):
-        self.assert_rejected('Manifest FAILED', raw='--- !ruby/object:Object {}\n')
+        marker = Path(self.temp.name) / 'executed'
+        self.assert_rejected('Manifest FAILED', raw=f'!!python/object/apply:os.system ["touch {marker}"]\n')
+        self.assertFalse(marker.exists())
 
     def test_field_is_data_not_shell_code(self):
         marker = Path(self.temp.name) / 'executed'

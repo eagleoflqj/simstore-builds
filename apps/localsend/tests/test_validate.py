@@ -5,10 +5,13 @@ from pathlib import Path
 import plistlib
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
-spec = importlib.util.spec_from_file_location('validate', Path(__file__).parents[1] / 'validate.py')
+APP = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(APP))
+spec = importlib.util.spec_from_file_location('validate', APP / 'validate.py')
 validator = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(validator)
 
@@ -55,6 +58,11 @@ class BundleTests(unittest.TestCase):
         self.assertEqual(info['CFBundleIdentifier'], 'org.simstore.fixture')
         self.assertEqual(binaries, [Path('Fixture')])
         self.assertEqual(minimum, (17, 0, 0))
+
+    def test_validation_without_manifest_needs_only_stdlib(self):
+        result = subprocess.run([sys.executable, '-S', str(APP / 'validate.py'), str(self.app)],
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_arm64_device_rejected_despite_simulator_plist(self):
         shutil.copy2(self.base / 'device', self.app / 'Fixture')

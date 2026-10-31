@@ -2,6 +2,10 @@
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
 mkdir -p "$work/tools"
+if [[ ! -x "$work/python/bin/python3" ]]; then
+  python3 -m venv "$work/python"
+fi
+"$work/python/bin/python3" -m pip install -r "$app_dir/requirements.txt"
 ruby -e 'abort "Install Ruby >= 3.2 (for example: brew install ruby)" if Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.2")'
 if ! bundle "_${BUNDLER_VERSION}_" --version >/dev/null 2>&1; then
   gem install --no-document --install-dir "$GEM_HOME" bundler --version "$BUNDLER_VERSION"

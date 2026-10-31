@@ -15,7 +15,8 @@ if command -v brew >/dev/null; then
 fi
 export GEM_HOME="$work/bootstrap-gems"
 export GEM_PATH="$GEM_HOME:$(ruby -e 'puts Gem.default_dir')"
-export PATH="$GEM_HOME/bin:$work/cargo/bin:$work/flutter/bin:$PATH"
+export PATH="$GEM_HOME/bin:$work/python/bin:$work/cargo/bin:$work/flutter/bin:$PATH"
 export PUB_CACHE="$work/pub-cache" RUSTUP_HOME="$work/rustup" CARGO_HOME="$work/cargo"
+export PIP_CACHE_DIR="$work/pip-cache"
 export BUNDLE_GEMFILE="$app_dir/Gemfile" BUNDLE_PATH="$work/gems" BUNDLE_FROZEN=true
 export CI=true FLUTTER_SUPPRESS_ANALYTICS=true COCOAPODS_DISABLE_STATS=true

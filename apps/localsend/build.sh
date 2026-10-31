@@ -4,12 +4,6 @@ set -euo pipefail
 app_dir=$(cd "$(dirname "$0")" && pwd)
 source "$app_dir/env.sh"
 manifest="$app_dir/manifest.yaml"
-manifest_field() {
-  ruby "$app_dir/manifest.rb" "$manifest" --field "$1"
-}
-LOCALSEND_REPOSITORY=$(manifest_field source.repository)
-LOCALSEND_REVISION=$(manifest_field source.revision)
-SIMULATOR_DEPLOYMENT_TARGET=$(manifest_field build.deploymentTarget)
 strip_symbols=false
 output_name=LocalSend.app
 if [[ $# == 1 && ${1:-} == --strip ]]; then
@@ -21,6 +15,13 @@ elif [[ $# != 0 ]]; then
 fi
 mkdir -p "$work/logs"
 exec > >(tee "$work/logs/build.log") 2>&1
+bash "$app_dir/setup.sh"
+manifest_field() {
+  python3 "$app_dir/manifest.py" "$manifest" --field "$1"
+}
+LOCALSEND_REPOSITORY=$(manifest_field source.repository)
+LOCALSEND_REVISION=$(manifest_field source.revision)
+SIMULATOR_DEPLOYMENT_TARGET=$(manifest_field build.deploymentTarget)
 checkout() {
   local url=$1 revision=$2 dest=$3
   if [[ ! -d "$dest" ]]; then
@@ -50,7 +51,6 @@ rust = (source / 'rust-toolchain.toml').read_text()
 if re.search(r'^channel = "([^"]+)"', rust, re.M).group(1) != sys.argv[3]:
     sys.exit('Rust pin does not match upstream rust-toolchain.toml')
 PY
-bash "$app_dir/setup.sh"
 flutter="$work/flutter/bin/flutter"
 "$flutter" --version --machine > "$work/logs/flutter-version.json"
 xcodebuild -version
