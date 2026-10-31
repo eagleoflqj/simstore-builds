@@ -9,7 +9,7 @@ import plistlib
 import re
 import subprocess
 import sys
-from typing import Any, TypedDict, Union, cast
+from typing import Any, TypedDict, cast
 
 
 OSVersion = tuple[int, int, int]
@@ -50,7 +50,7 @@ MACH_MAGICS = {
 }
 
 
-def validate(app: Union[str, Path]) -> tuple[BundleInfo, list[Path], OSVersion]:
+def validate(app: str | Path) -> tuple[BundleInfo, list[Path], OSVersion]:
     app = Path(app).resolve(strict=True)
     if app.suffix != '.app' or not app.is_dir():
         raise InvalidBundle('Expected an existing .app directory')
@@ -110,7 +110,7 @@ def validate(app: Union[str, Path]) -> tuple[BundleInfo, list[Path], OSVersion]:
     return root_info, binaries, max(minimums)
 
 
-def check_manifest(path: Union[str, Path], info: BundleInfo, binary_minimum: OSVersion) -> str:
+def check_manifest(path: str | Path, info: BundleInfo, binary_minimum: OSVersion) -> str:
     """Check app version and build/runtime floors against a valid recipe."""
     from manifest import ManifestError, load_manifest
 

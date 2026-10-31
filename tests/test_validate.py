@@ -9,7 +9,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from typing import Any, Optional
+from typing import Any
 import unittest
 
 SCRIPTS = Path(__file__).resolve().parents[1] / 'scripts'
@@ -148,7 +148,7 @@ fi
         self.write_info()
         self.assertEqual(validator.validate(self.app)[2], (17, 0, 0))
 
-    def manifest(self, deployment: str = '17.0', minimum: Optional[str] = None) -> Path:
+    def manifest(self, deployment: str = '17.0', minimum: str | None = None) -> Path:
         directory = Path(self.work.name) / 'example'
         directory.mkdir()
         (directory / 'build.sh').write_text('#!/bin/bash\n')

@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 import re
 import sys
-from typing import Optional, TypedDict, Union, cast
+from typing import TypedDict, cast
 from urllib.parse import urlsplit
 
 import yaml
@@ -45,7 +45,7 @@ class Manifest(RequiredManifest, total=False):
 
 
 class ManifestLoader(yaml.SafeLoader):
-    def compose_node(self, parent: Optional[yaml.Node], index: Union[int, yaml.Node, None]) -> Optional[yaml.Node]:
+    def compose_node(self, parent: yaml.Node | None, index: int | yaml.Node | None) -> yaml.Node | None:
         if self.check_event(yaml.AliasEvent):
             raise ManifestError('YAML aliases are not allowed')
         # PyYAML also passes mapping key nodes and None; its stubs only accept int.
@@ -93,7 +93,7 @@ def os_version(value: object, context: str) -> tuple[int, int, int]:
     return padded[0], padded[1], padded[2]
 
 
-def load_manifest(path: Union[str, Path]) -> Manifest:
+def load_manifest(path: str | Path) -> Manifest:
     path = Path(path).absolute()
     try:
         documents = list(yaml.load_all(path.read_text(), Loader=ManifestLoader))

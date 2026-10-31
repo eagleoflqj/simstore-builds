@@ -8,13 +8,12 @@ from pathlib import Path
 import stat
 import sys
 import tempfile
-from typing import Union
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'scripts'))
 from validate import MACH_MAGICS, run, validate
 
 
-def prepare(app: Union[str, Path], strip_symbols: bool = False) -> None:
+def prepare(app: str | Path, strip_symbols: bool = False) -> None:
     app = Path(app).resolve(strict=True)
     if app.suffix != '.app' or not app.is_dir():
         raise ValueError('Expected an existing .app directory')

@@ -6,7 +6,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
-from typing import Any, Optional
+from typing import Any
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,14 +28,14 @@ class ManifestTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.temp.cleanup()
 
-    def read(self, raw: Optional[str] = None, field: Optional[str] = None) -> subprocess.CompletedProcess[str]:
+    def read(self, raw: str | None = None, field: str | None = None) -> subprocess.CompletedProcess[str]:
         self.path.write_text(json.dumps(self.data) if raw is None else raw)
         args = [sys.executable, str(READER), str(self.path)]
         if field:
             args += ['--field', field]
         return subprocess.run(args, capture_output=True, text=True)
 
-    def assert_rejected(self, text: str, raw: Optional[str] = None) -> None:
+    def assert_rejected(self, text: str, raw: str | None = None) -> None:
         result = self.read(raw=raw)
         self.assertNotEqual(result.returncode, 0, result.stdout)
         self.assertIn(text, result.stderr)
