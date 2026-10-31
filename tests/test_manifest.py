@@ -43,8 +43,33 @@ class ManifestTests(unittest.TestCase):
     def test_valid_manifest_without_compatibility(self) -> None:
         result = self.read()
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(json.loads(result.stdout), self.data)
+        normalized = json.loads(result.stdout)
+        self.assertIs(normalized['build'].pop('stripSymbols'), True)
+        self.assertEqual(normalized, self.data)
         self.assertNotIn('compatibility', self.data)
+
+    def test_strip_symbols_defaults_to_true(self) -> None:
+        result = self.read(field='build.stripSymbols')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, 'true\n')
+
+    def test_strip_symbols_can_be_enabled_or_disabled(self) -> None:
+        for enabled in (True, False):
+            with self.subTest(enabled=enabled):
+                self.data['build']['stripSymbols'] = enabled
+                result = self.read()
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIs(json.loads(result.stdout)['build']['stripSymbols'], enabled)
+                result = self.read(field='build.stripSymbols')
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout, json.dumps(enabled) + '\n')
+
+    def test_strip_symbols_rejects_non_booleans(self) -> None:
+        value: object
+        for value in (None, 'true', 'false', 0, 1, 1.0, [], {}):
+            with self.subTest(value=value):
+                self.data['build']['stripSymbols'] = value
+                self.assert_rejected('build.stripSymbols must be a boolean')
 
     def test_another_app_with_a_different_build_script(self) -> None:
         other = self.directory.with_name('unrelated-app')

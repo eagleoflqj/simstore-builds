@@ -27,6 +27,7 @@ class Source(TypedDict):
 class Build(TypedDict):
     script: str
     deploymentTarget: str
+    stripSymbols: bool
 
 
 class Compatibility(TypedDict):
@@ -125,7 +126,10 @@ def load_manifest(path: str | Path) -> Manifest:
     if not re.fullmatch(r'[0-9a-f]{40}', revision):
         raise ManifestError('source.revision must be a full 40-character lowercase Git commit')
 
-    build = mapping(data['build'], ('script', 'deploymentTarget'), 'build')
+    build = mapping(data['build'], ('script', 'deploymentTarget'), 'build', ('stripSymbols',))
+    build.setdefault('stripSymbols', True)
+    if not isinstance(build['stripSymbols'], bool):
+        raise ManifestError('build.stripSymbols must be a boolean')
     script = string(build['script'], 'build.script')
     if Path(script).is_absolute() or any(part in ('.', '..') for part in script.split('/')):
         raise ManifestError('build.script must stay inside the application directory')
@@ -146,7 +150,7 @@ def load_manifest(path: str | Path) -> Manifest:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('manifest', type=Path)
-    parser.add_argument('--field', help='Print one string field without shell evaluation')
+    parser.add_argument('--field', help='Print one string or boolean field without shell evaluation')
     args = parser.parse_args()
     try:
         data = load_manifest(args.manifest)
@@ -156,9 +160,9 @@ def main() -> int:
                 if not isinstance(value, dict) or key not in value:
                     raise ManifestError(f'Unknown field: {args.field}')
                 value = value[key]
-            if not isinstance(value, str):
-                raise ManifestError('--field requires a string scalar')
-            print(value)
+            if not isinstance(value, (str, bool)):
+                raise ManifestError('--field requires a string or boolean scalar')
+            print(json.dumps(value) if isinstance(value, bool) else value)
         else:
             print(json.dumps(data, indent=2))
     except (ManifestError, OSError) as e:

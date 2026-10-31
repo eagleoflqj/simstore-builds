@@ -4,13 +4,8 @@ set -euo pipefail
 app_dir=$(cd "$(dirname "$0")" && pwd)
 source "$app_dir/env.sh"
 manifest="$app_dir/manifest.yaml"
-strip_symbols=false
-output_name=LocalSend.app
-if [[ $# == 1 && ${1:-} == --strip ]]; then
-  strip_symbols=true
-  output_name=LocalSend-stripped.app
-elif [[ $# != 0 ]]; then
-  echo 'Usage: bash build.sh [--strip]' >&2
+if [[ $# != 0 ]]; then
+  echo 'Usage: bash build.sh' >&2
   exit 2
 fi
 mkdir -p "$work/logs"
@@ -22,6 +17,7 @@ manifest_field() {
 LOCALSEND_REPOSITORY=$(manifest_field source.repository)
 LOCALSEND_REVISION=$(manifest_field source.revision)
 SIMULATOR_DEPLOYMENT_TARGET=$(manifest_field build.deploymentTarget)
+strip_symbols=$(manifest_field build.stripSymbols)
 checkout() {
   local url=$1 revision=$2 dest=$3
   if [[ ! -d "$dest" ]]; then
@@ -74,7 +70,7 @@ app="$work/derived-data/Build/Products/Debug-iphonesimulator/Runner.app"
 staging=$(mktemp -d "$work/stage.XXXXXX")
 trap 'rm -rf "$staging"' EXIT
 ditto "$app" "$staging/LocalSend.app"
-if $strip_symbols; then
+if [[ "$strip_symbols" == true ]]; then
   python3 "$app_dir/prepare-app.py" "$staging/LocalSend.app" --strip
 else
   python3 "$app_dir/prepare-app.py" "$staging/LocalSend.app"
@@ -82,9 +78,9 @@ fi
 python3 "$repo_dir/scripts/validate.py" "$staging/LocalSend.app" --manifest "$manifest" | tee "$work/logs/validation.log"
 mkdir -p "$work/output"
 # Replace only this script's previous output after a successful build/check.
-if [[ -e "$work/output/$output_name" ]]; then
-  rm -rf "$work/output/$output_name"
+if [[ -e "$work/output/LocalSend.app" ]]; then
+  rm -rf "$work/output/LocalSend.app"
 fi
-ditto "$staging/LocalSend.app" "$work/output/$output_name"
-echo "App ready to copy: $work/output/$output_name"
+ditto "$staging/LocalSend.app" "$work/output/LocalSend.app"
+echo "App ready to copy: $work/output/LocalSend.app"
 echo 'Local install/launch skipped; run scripts/smoke-test.sh on the target host.'
