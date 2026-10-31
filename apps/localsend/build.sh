@@ -17,7 +17,7 @@ mkdir -p "$work/logs"
 exec > >(tee "$work/logs/build.log") 2>&1
 bash "$app_dir/setup.sh"
 manifest_field() {
-  python3 "$app_dir/manifest.py" "$manifest" --field "$1"
+  python3 "$repo_dir/scripts/manifest.py" "$manifest" --field "$1"
 }
 LOCALSEND_REPOSITORY=$(manifest_field source.repository)
 LOCALSEND_REVISION=$(manifest_field source.revision)
@@ -79,7 +79,7 @@ if $strip_symbols; then
 else
   python3 "$app_dir/prepare-app.py" "$staging/LocalSend.app"
 fi
-python3 "$app_dir/validate.py" "$staging/LocalSend.app" --manifest "$manifest" | tee "$work/logs/validation.log"
+python3 "$repo_dir/scripts/validate.py" "$staging/LocalSend.app" --manifest "$manifest" | tee "$work/logs/validation.log"
 mkdir -p "$work/output"
 # Replace only this script's previous output after a successful build/check.
 if [[ -e "$work/output/$output_name" ]]; then
@@ -87,4 +87,4 @@ if [[ -e "$work/output/$output_name" ]]; then
 fi
 ditto "$staging/LocalSend.app" "$work/output/$output_name"
 echo "App ready to copy: $work/output/$output_name"
-echo 'Local install/launch skipped; run smoke-test.sh on the target host.'
+echo 'Local install/launch skipped; run scripts/smoke-test.sh on the target host.'

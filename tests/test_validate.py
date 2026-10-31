@@ -1,4 +1,4 @@
-"""Use real clang-built fixtures, never represented as LocalSend artifacts."""
+"""Validate Simulator bundles with real clang-built fixtures."""
 import importlib.util
 import json
 from pathlib import Path
@@ -9,9 +9,9 @@ import sys
 import tempfile
 import unittest
 
-APP = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(APP))
-spec = importlib.util.spec_from_file_location('validate', APP / 'validate.py')
+SCRIPTS = Path(__file__).resolve().parents[1] / 'scripts'
+sys.path.insert(0, str(SCRIPTS))
+spec = importlib.util.spec_from_file_location('validate', SCRIPTS / 'validate.py')
 validator = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(validator)
 
@@ -60,7 +60,7 @@ class BundleTests(unittest.TestCase):
         self.assertEqual(minimum, (17, 0, 0))
 
     def test_validation_without_manifest_needs_only_stdlib(self):
-        result = subprocess.run([sys.executable, '-S', str(APP / 'validate.py'), str(self.app)],
+        result = subprocess.run([sys.executable, '-S', str(SCRIPTS / 'validate.py'), str(self.app)],
                                 capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
 
@@ -114,14 +114,13 @@ class BundleTests(unittest.TestCase):
         self.assertEqual(validator.validate(self.app)[2], (17, 0, 0))
 
     def manifest(self, deployment='17.0', minimum=None):
-        directory = Path(self.work.name) / 'localsend'
+        directory = Path(self.work.name) / 'example'
         directory.mkdir()
         (directory / 'build.sh').write_text('#!/bin/bash\n')
         path = directory / 'manifest.yaml'
         data = dict(
-            id='localsend', name='LocalSend',
-            source=dict(repository='https://github.com/localsend/localsend',
-                        version='v1.0.0', revision='af0416be50770a97760f7070684bc667b759a15c'),
+            id='example', name='Example',
+            source=dict(repository='https://example.com/apps/example', version='v1.0.0', revision='a' * 40),
             build=dict(script='build.sh', deploymentTarget=deployment))
         if minimum is not None:
             data['compatibility'] = dict(minSimulatorOS=minimum)

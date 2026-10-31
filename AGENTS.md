@@ -6,11 +6,12 @@
 - Keep the README focused on the project's purpose. Do not add per-app build, dependency, installation, or test instructions. Keep agent instructions in this file. Do not put conversation history, milestone progress, or temporary validation results in either document.
 - Keep app-specific configuration and dependency lockfiles under `apps/<id>/`. Treat manifests and lockfiles as the source of version settings; avoid duplicating them in documentation or scripts.
 - Use Python for maintained parsing and validation tools. Keep Ruby limited to CocoaPods dependency setup.
-- Build and run CI for each app independently. Keep scripts and tests in the app's directory. Do not add a batch build entry point. Extract shared scripts only when at least two apps actually share an operation.
+- Build and run CI for each app independently. Keep app-specific environment setup, compilation, and artifact preparation in the app's directory. Do not add a batch build entry point. Extract shared build steps only when at least two apps actually share an operation.
+- Keep Manifest-spec parsing, App Bundle validation, Simulator smoke checks, and their tests at repository level. These tools validate common input and output contracts independently of app build systems.
 - Pin upstream source to the full commit of a stable release and use that revision's required toolchain. Maintain necessary source changes as patches.
 - Support only Apple Silicon macOS and arm64 iOS Simulator apps. Do not produce x86_64 or Universal apps. Validate the Mach-O platform as well as the CPU architecture.
 - Derive the default compatibility minimum from the built app's deployment requirements. Set `compatibility.minSimulatorOS` only when an additional restriction is needed; the entire section may be omitted. Compilation success does not replace installation, launch, or functional testing.
 - Re-sign modified binaries and preserve resources, plugins, and entitlements. Stripping must preserve symbols used at runtime.
 - When changing build logic, run relevant tests and a feasible actual build. CI app validation includes Simulator installation and launch.
-- Do not commit complete upstream source trees, dependency caches, or build output. Keep downloaded and generated files in each app's `build/` directory.
+- Do not commit complete upstream source trees, dependency caches, or build output. Keep app downloads and generated files in each app's `build/` directory, and shared tooling dependencies in the repository's `build/` directory.
 - Do not hardcode personal machine paths, modify upstream remote repositories, or create or overwrite GitHub Releases without user authorization.

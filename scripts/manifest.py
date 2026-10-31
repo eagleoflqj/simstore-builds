@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read and validate a LocalSend recipe without evaluating YAML objects or aliases."""
+"""Read and validate an app recipe without evaluating YAML objects or aliases."""
 import argparse
 import json
 from pathlib import Path

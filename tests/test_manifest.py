@@ -1,5 +1,4 @@
 """Exercise the YAML recipe boundary through its public command-line interface."""
-import copy
 import json
 from pathlib import Path
 import subprocess
@@ -7,23 +6,21 @@ import sys
 import tempfile
 import unittest
 
-APP = Path(__file__).resolve().parents[1]
-READER = APP / 'manifest.py'
+ROOT = Path(__file__).resolve().parents[1]
+READER = ROOT / 'scripts/manifest.py'
 
 
 class ManifestTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.recipe = json.loads(subprocess.check_output(
-            [sys.executable, str(READER), str(APP / 'manifest.yaml')], text=True))
-
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix='simstore-manifest-')
-        self.directory = Path(self.temp.name) / 'localsend'
+        self.directory = Path(self.temp.name) / 'example'
         self.directory.mkdir()
         (self.directory / 'build.sh').write_text('#!/bin/bash\n')
         self.path = self.directory / 'manifest.yaml'
-        self.data = copy.deepcopy(self.recipe)
+        self.data = dict(
+            id='example', name='Example',
+            source=dict(repository='https://example.com/apps/example', version='v1.2.3', revision='a' * 40),
+            build=dict(script='build.sh', deploymentTarget='16.0'))
 
     def tearDown(self):
         self.temp.cleanup()
@@ -40,11 +37,24 @@ class ManifestTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0, result.stdout)
         self.assertIn(text, result.stderr)
 
-    def test_checked_in_recipe(self):
+    def test_valid_manifest_without_compatibility(self):
         result = self.read()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout), self.data)
         self.assertNotIn('compatibility', self.data)
+
+    def test_another_app_with_a_different_build_script(self):
+        other = self.directory.with_name('unrelated-app')
+        self.directory.rename(other)
+        self.directory = other
+        self.path = other / 'manifest.yaml'
+        (other / 'compile.py').write_text('print("build")\n')
+        self.data['id'] = 'unrelated-app'
+        self.data['name'] = 'Unrelated App'
+        self.data['source']['repository'] = 'https://example.net/unrelated'
+        self.data['build']['script'] = 'compile.py'
+        result = self.read()
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_minimum_required_when_compatibility_present(self):
         self.data['compatibility'] = {}
@@ -61,13 +71,13 @@ class ManifestTests(unittest.TestCase):
                 self.assert_rejected('Manifest FAILED')
 
     def test_commit_must_be_immutable(self):
-        for value in ('main', 'v1.18.2', 'af0416b'):
+        for value in ('main', 'v1.2.3', 'abc1234'):
             with self.subTest(value=value):
                 self.data['source']['revision'] = value
                 self.assert_rejected('full 40-character')
 
     def test_release_version_can_have_v_prefix(self):
-        for value in ('v1.18.2', '1.18.2', 'v0.0.0', '0.1.0'):
+        for value in ('v1.2.3', '1.2.3', 'v0.0.0', '0.1.0'):
             with self.subTest(value=value):
                 self.data['source']['version'] = value
                 result = self.read(field='source.version')
@@ -79,7 +89,7 @@ class ManifestTests(unittest.TestCase):
         self.assert_rejected('source.version is required')
 
     def test_nonstandard_release_version_rejected(self):
-        for value in ('v1.18.2-rc1', 'release-1.18.2', '1.18', 'v01.18.2', '1.018.2', '1.18.02'):
+        for value in ('v1.2.3-rc1', 'release-1.2.3', '1.2', 'v01.2.3', '1.02.3', '1.2.03'):
             with self.subTest(value=value):
                 self.data['source']['version'] = value
                 self.assert_rejected('stable [v]MAJOR.MINOR.PATCH')
@@ -129,16 +139,16 @@ class ManifestTests(unittest.TestCase):
         self.assert_rejected('inside the application directory')
 
     def test_duplicate_yaml_key_rejected(self):
-        self.assert_rejected('Duplicate YAML', raw='id: localsend\nid: other\n')
+        self.assert_rejected('Duplicate YAML', raw='id: example\nid: other\n')
 
     def test_malformed_yaml_mapping_rejected(self):
         self.assert_rejected('YAML mappings must contain key/value pairs', raw='!!map "invalid"\n')
 
     def test_multiple_documents_rejected(self):
-        self.assert_rejected('exactly one YAML document', raw='---\nid: localsend\n---\nid: other\n')
+        self.assert_rejected('exactly one YAML document', raw='---\nid: example\n---\nid: other\n')
 
     def test_yaml_alias_rejected(self):
-        self.assert_rejected('aliases are not allowed', raw='id: &name localsend\nname: *name\n')
+        self.assert_rejected('aliases are not allowed', raw='id: &name example\nname: *name\n')
 
     def test_yaml_object_rejected(self):
         marker = Path(self.temp.name) / 'executed'

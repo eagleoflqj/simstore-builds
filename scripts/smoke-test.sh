@@ -5,8 +5,8 @@ if [[ $# != 2 || $2 == booted ]]; then
   echo 'Usage: bash smoke-test.sh /path/to/App.app EXPLICIT-BOOTED-UDID' >&2
   exit 2
 fi
-app_dir=$(cd "$(dirname "$0")" && pwd)
-python3 "$app_dir/validate.py" "$1"
+script_dir=$(cd "$(dirname "$0")" && pwd)
+python3 "$script_dir/validate.py" "$1"
 python3 - "$2" <<'PY'
 import json, subprocess, sys
 data = json.loads(subprocess.check_output(['xcrun', 'simctl', 'list', '--json']))
