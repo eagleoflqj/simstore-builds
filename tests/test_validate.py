@@ -1,6 +1,7 @@
 """Validate Simulator bundles with real clang-built fixtures."""
 import importlib.util
 import json
+import os
 from pathlib import Path
 import plistlib
 import shutil
@@ -63,6 +64,35 @@ class BundleTests(unittest.TestCase):
         result = subprocess.run([sys.executable, '-S', str(SCRIPTS / 'validate.py'), str(self.app)],
                                 capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_smoke_forwards_booted_and_udid_to_simctl(self):
+        fake_bin = Path(self.work.name) / 'bin'
+        fake_bin.mkdir()
+        fake_xcrun = fake_bin / 'xcrun'
+        fake_xcrun.write_text('''#!/bin/bash
+if [[ $1 == simctl ]]; then
+  printf '%s\\0' "$@" >> "$SIMSTORE_SMOKE_LOG"
+  printf '\\n' >> "$SIMSTORE_SMOKE_LOG"
+else
+  exec "$SIMSTORE_REAL_XCRUN" "$@"
+fi
+''')
+        fake_xcrun.chmod(0o755)
+        log = Path(self.work.name) / 'simctl.log'
+        env = dict(os.environ, PATH=f'{fake_bin}{os.pathsep}{os.environ["PATH"]}',
+                   SIMSTORE_REAL_XCRUN=shutil.which('xcrun'), SIMSTORE_SMOKE_LOG=str(log))
+        for target in ('booted', '00000000-0000-0000-0000-000000000001'):
+            with self.subTest(target=target):
+                log.unlink(missing_ok=True)
+                result = subprocess.run(['bash', str(SCRIPTS / 'smoke-test.sh'), str(self.app), target],
+                                        env=env, capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                calls = [[arg.decode() for arg in line.rstrip(b'\0').split(b'\0')]
+                         for line in log.read_bytes().splitlines()]
+                self.assertEqual(calls, [
+                    ['simctl', 'install', target, str(self.app)],
+                    ['simctl', 'launch', '--terminate-running-process', target, 'org.simstore.fixture'],
+                ])
 
     def test_arm64_device_rejected_despite_simulator_plist(self):
         shutil.copy2(self.base / 'device', self.app / 'Fixture')

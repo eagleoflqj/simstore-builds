@@ -1,19 +1,12 @@
 #!/bin/bash
-# Requires an explicitly selected, already booted Simulator; installs this app.
+# Install and launch on a Simulator selected by UDID or the booted alias.
 set -euo pipefail
-if [[ $# != 2 || $2 == booted ]]; then
-  echo 'Usage: bash smoke-test.sh /path/to/App.app EXPLICIT-BOOTED-UDID' >&2
+if [[ $# != 2 ]]; then
+  echo 'Usage: bash smoke-test.sh /path/to/App.app <UDID|booted>' >&2
   exit 2
 fi
 script_dir=$(cd "$(dirname "$0")" && pwd)
 python3 "$script_dir/validate.py" "$1"
-python3 - "$2" <<'PY'
-import json, subprocess, sys
-data = json.loads(subprocess.check_output(['xcrun', 'simctl', 'list', '--json']))
-devices = [d for items in data['devices'].values() for d in items]
-if not any(d['udid'] == sys.argv[1] and d['state'] == 'Booted' and d.get('isAvailable') for d in devices):
-    sys.exit('Selected Simulator is not available and booted')
-PY
 app=$(cd "$1" && pwd)
 bundle=$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$app/Info.plist")
 xcrun simctl install "$2" "$app"
