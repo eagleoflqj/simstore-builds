@@ -1,9 +1,12 @@
 """Exercise the YAML recipe boundary through its public command-line interface."""
+from __future__ import annotations
+
 import json
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from typing import Any, Optional
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -11,39 +14,39 @@ READER = ROOT / 'scripts/manifest.py'
 
 
 class ManifestTests(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory(prefix='simstore-manifest-')
         self.directory = Path(self.temp.name) / 'example'
         self.directory.mkdir()
         (self.directory / 'build.sh').write_text('#!/bin/bash\n')
         self.path = self.directory / 'manifest.yaml'
-        self.data = dict(
+        self.data: dict[str, Any] = dict(
             id='example', name='Example',
             source=dict(repository='https://example.com/apps/example', version='v1.2.3', revision='a' * 40),
             build=dict(script='build.sh', deploymentTarget='16.0'))
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         self.temp.cleanup()
 
-    def read(self, raw=None, field=None):
+    def read(self, raw: Optional[str] = None, field: Optional[str] = None) -> subprocess.CompletedProcess[str]:
         self.path.write_text(json.dumps(self.data) if raw is None else raw)
         args = [sys.executable, str(READER), str(self.path)]
         if field:
             args += ['--field', field]
         return subprocess.run(args, capture_output=True, text=True)
 
-    def assert_rejected(self, text, raw=None):
+    def assert_rejected(self, text: str, raw: Optional[str] = None) -> None:
         result = self.read(raw=raw)
         self.assertNotEqual(result.returncode, 0, result.stdout)
         self.assertIn(text, result.stderr)
 
-    def test_valid_manifest_without_compatibility(self):
+    def test_valid_manifest_without_compatibility(self) -> None:
         result = self.read()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout), self.data)
         self.assertNotIn('compatibility', self.data)
 
-    def test_another_app_with_a_different_build_script(self):
+    def test_another_app_with_a_different_build_script(self) -> None:
         other = self.directory.with_name('unrelated-app')
         self.directory.rename(other)
         self.directory = other
@@ -56,27 +59,27 @@ class ManifestTests(unittest.TestCase):
         result = self.read()
         self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_minimum_required_when_compatibility_present(self):
+    def test_minimum_required_when_compatibility_present(self) -> None:
         self.data['compatibility'] = {}
         self.assert_rejected('minSimulatorOS is required')
 
-    def test_version_must_be_quoted_string(self):
+    def test_version_must_be_quoted_string(self) -> None:
         self.data['compatibility'] = dict(minSimulatorOS=27.0)
         self.assert_rejected('must be a nonempty string')
 
-    def test_invalid_versions(self):
+    def test_invalid_versions(self) -> None:
         for value in ('', '0.0', '27.beta', '27.0.1.2', ' 27.0'):
             with self.subTest(value=value):
                 self.data['compatibility'] = dict(minSimulatorOS=value)
                 self.assert_rejected('Manifest FAILED')
 
-    def test_commit_must_be_immutable(self):
+    def test_commit_must_be_immutable(self) -> None:
         for value in ('main', 'v1.2.3', 'abc1234'):
             with self.subTest(value=value):
                 self.data['source']['revision'] = value
                 self.assert_rejected('full 40-character')
 
-    def test_release_version_can_have_v_prefix(self):
+    def test_release_version_can_have_v_prefix(self) -> None:
         for value in ('v1.2.3', '1.2.3', 'v0.0.0', '0.1.0'):
             with self.subTest(value=value):
                 self.data['source']['version'] = value
@@ -84,78 +87,79 @@ class ManifestTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(result.stdout.strip(), value)
 
-    def test_release_version_required(self):
+    def test_release_version_required(self) -> None:
         del self.data['source']['version']
         self.assert_rejected('source.version is required')
 
-    def test_nonstandard_release_version_rejected(self):
+    def test_nonstandard_release_version_rejected(self) -> None:
         for value in ('v1.2.3-rc1', 'release-1.2.3', '1.2', 'v01.2.3', '1.02.3', '1.2.03'):
             with self.subTest(value=value):
                 self.data['source']['version'] = value
                 self.assert_rejected('stable [v]MAJOR.MINOR.PATCH')
 
-    def test_old_tag_field_rejected(self):
+    def test_old_tag_field_rejected(self) -> None:
         self.data['source']['tag'] = self.data['source']['version']
         self.assert_rejected('unknown fields tag')
 
-    def test_repository_credentials_rejected(self):
+    def test_repository_credentials_rejected(self) -> None:
         self.data['source']['repository'] = 'https://user:secret@example.com/app.git'
         self.assert_rejected('without credentials')
 
-    def test_architecture_field_rejected(self):
+    def test_architecture_field_rejected(self) -> None:
         self.data['build']['architecture'] = 'arm64'
         self.assert_rejected('unknown fields architecture')
 
-    def test_minimum_below_deployment_rejected(self):
+    def test_minimum_below_deployment_rejected(self) -> None:
         self.data['compatibility'] = dict(minSimulatorOS='15.0')
         self.assert_rejected('below build.deploymentTarget')
 
-    def test_minimum_accepts_deployment_or_higher_without_test_record(self):
+    def test_minimum_accepts_deployment_or_higher_without_test_record(self) -> None:
         for value in ('16.0', '27.0'):
             with self.subTest(value=value):
                 self.data['compatibility'] = dict(minSimulatorOS=value)
                 result = self.read()
                 self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_removed_tested_field_rejected(self):
+    def test_removed_tested_field_rejected(self) -> None:
         self.data['compatibility'] = dict(minSimulatorOS='16.0', testedSimulatorOS=['27.0'])
         self.assert_rejected('unknown fields testedSimulatorOS')
 
-    def test_compatibility_must_be_mapping_if_present(self):
+    def test_compatibility_must_be_mapping_if_present(self) -> None:
+        value: object
         for value in (None, [], '16.0'):
             with self.subTest(value=value):
                 self.data['compatibility'] = value
                 self.assert_rejected('compatibility must be a mapping')
 
-    def test_script_path_escape_rejected(self):
+    def test_script_path_escape_rejected(self) -> None:
         self.data['build']['script'] = '../build.sh'
         self.assert_rejected('inside the application directory')
 
-    def test_script_symlink_escape_rejected(self):
+    def test_script_symlink_escape_rejected(self) -> None:
         outside = Path(self.temp.name) / 'outside.sh'
         outside.write_text('#!/bin/bash\n')
         (self.directory / 'escape.sh').symlink_to(outside)
         self.data['build']['script'] = 'escape.sh'
         self.assert_rejected('inside the application directory')
 
-    def test_duplicate_yaml_key_rejected(self):
+    def test_duplicate_yaml_key_rejected(self) -> None:
         self.assert_rejected('Duplicate YAML', raw='id: example\nid: other\n')
 
-    def test_malformed_yaml_mapping_rejected(self):
+    def test_malformed_yaml_mapping_rejected(self) -> None:
         self.assert_rejected('YAML mappings must contain key/value pairs', raw='!!map "invalid"\n')
 
-    def test_multiple_documents_rejected(self):
+    def test_multiple_documents_rejected(self) -> None:
         self.assert_rejected('exactly one YAML document', raw='---\nid: example\n---\nid: other\n')
 
-    def test_yaml_alias_rejected(self):
+    def test_yaml_alias_rejected(self) -> None:
         self.assert_rejected('aliases are not allowed', raw='id: &name example\nname: *name\n')
 
-    def test_yaml_object_rejected(self):
+    def test_yaml_object_rejected(self) -> None:
         marker = Path(self.temp.name) / 'executed'
         self.assert_rejected('Manifest FAILED', raw=f'!!python/object/apply:os.system ["touch {marker}"]\n')
         self.assertFalse(marker.exists())
 
-    def test_field_is_data_not_shell_code(self):
+    def test_field_is_data_not_shell_code(self) -> None:
         marker = Path(self.temp.name) / 'executed'
         self.data['name'] = f'$(touch {marker})'
         result = self.read(field='name')
@@ -163,7 +167,7 @@ class ManifestTests(unittest.TestCase):
         self.assertEqual(result.stdout.strip(), self.data['name'])
         self.assertFalse(marker.exists())
 
-    def test_unknown_field_query_rejected(self):
+    def test_unknown_field_query_rejected(self) -> None:
         result = self.read(field='source.branch')
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('Unknown field', result.stderr)

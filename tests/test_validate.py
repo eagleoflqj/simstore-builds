@@ -1,5 +1,6 @@
 """Validate Simulator bundles with real clang-built fixtures."""
-import importlib.util
+from __future__ import annotations
+
 import json
 import os
 from pathlib import Path
@@ -8,18 +9,20 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from typing import Any, Optional
 import unittest
 
 SCRIPTS = Path(__file__).resolve().parents[1] / 'scripts'
 sys.path.insert(0, str(SCRIPTS))
-spec = importlib.util.spec_from_file_location('validate', SCRIPTS / 'validate.py')
-validator = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(validator)
+import validate as validator
 
 
 class BundleTests(unittest.TestCase):
+    temp: tempfile.TemporaryDirectory[str]
+    base: Path
+
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         cls.temp = tempfile.TemporaryDirectory(prefix='simstore-validator-')
         cls.base = Path(cls.temp.name)
         source = cls.base / 'fixture.c'
@@ -34,38 +37,38 @@ class BundleTests(unittest.TestCase):
                             str(source), '-o', str(cls.base / name)], check=True, capture_output=True)
 
     @classmethod
-    def tearDownClass(cls):
+    def tearDownClass(cls) -> None:
         cls.temp.cleanup()
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.work = tempfile.TemporaryDirectory(dir=self.base)
         self.app = Path(self.work.name) / 'Fixture.app'
         self.app.mkdir()
         shutil.copy2(self.base / 'simulator', self.app / 'Fixture')
-        self.info = dict(CFBundleIdentifier='org.simstore.fixture', CFBundleExecutable='Fixture',
+        self.info: dict[str, Any] = dict(CFBundleIdentifier='org.simstore.fixture', CFBundleExecutable='Fixture',
                          CFBundleShortVersionString='1.0', CFBundleVersion='1',
                          MinimumOSVersion='17.0', CFBundleSupportedPlatforms=['iPhoneSimulator'])
         self.write_info()
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         self.work.cleanup()
 
-    def write_info(self):
+    def write_info(self) -> None:
         with (self.app / 'Info.plist').open('wb') as f:
             plistlib.dump(self.info, f)
 
-    def test_real_arm64_simulator_accepted(self):
+    def test_real_arm64_simulator_accepted(self) -> None:
         info, binaries, minimum = validator.validate(self.app)
         self.assertEqual(info['CFBundleIdentifier'], 'org.simstore.fixture')
         self.assertEqual(binaries, [Path('Fixture')])
         self.assertEqual(minimum, (17, 0, 0))
 
-    def test_validation_without_manifest_needs_only_stdlib(self):
+    def test_validation_without_manifest_needs_only_stdlib(self) -> None:
         result = subprocess.run([sys.executable, '-S', str(SCRIPTS / 'validate.py'), str(self.app)],
                                 capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_smoke_forwards_booted_and_udid_to_simctl(self):
+    def test_smoke_forwards_booted_and_udid_to_simctl(self) -> None:
         fake_bin = Path(self.work.name) / 'bin'
         fake_bin.mkdir()
         fake_xcrun = fake_bin / 'xcrun'
@@ -79,8 +82,10 @@ fi
 ''')
         fake_xcrun.chmod(0o755)
         log = Path(self.work.name) / 'simctl.log'
+        real_xcrun = shutil.which('xcrun')
+        assert real_xcrun is not None
         env = dict(os.environ, PATH=f'{fake_bin}{os.pathsep}{os.environ["PATH"]}',
-                   SIMSTORE_REAL_XCRUN=shutil.which('xcrun'), SIMSTORE_SMOKE_LOG=str(log))
+                   SIMSTORE_REAL_XCRUN=real_xcrun, SIMSTORE_SMOKE_LOG=str(log))
         for target in ('booted', '00000000-0000-0000-0000-000000000001'):
             with self.subTest(target=target):
                 log.unlink(missing_ok=True)
@@ -94,61 +99,61 @@ fi
                     ['simctl', 'launch', '--terminate-running-process', target, 'org.simstore.fixture'],
                 ])
 
-    def test_arm64_device_rejected_despite_simulator_plist(self):
+    def test_arm64_device_rejected_despite_simulator_plist(self) -> None:
         shutil.copy2(self.base / 'device', self.app / 'Fixture')
         with self.assertRaisesRegex(validator.InvalidBundle, 'IOSSIMULATOR'):
             validator.validate(self.app)
 
-    def test_embedded_arm64_macos_binary_rejected(self):
+    def test_embedded_arm64_macos_binary_rejected(self) -> None:
         (self.app / 'Frameworks').mkdir()
         shutil.copy2(self.base / 'macos', self.app / 'Frameworks' / 'hidden.dylib')
         with self.assertRaisesRegex(validator.InvalidBundle, 'IOSSIMULATOR'):
             validator.validate(self.app)
 
-    def test_missing_executable_rejected(self):
+    def test_missing_executable_rejected(self) -> None:
         (self.app / 'Fixture').unlink()
         with self.assertRaisesRegex(validator.InvalidBundle, 'executable missing'):
             validator.validate(self.app)
 
-    def test_non_macho_executable_rejected(self):
+    def test_non_macho_executable_rejected(self) -> None:
         (self.app / 'Fixture').write_text('not a Mach-O')
         with self.assertRaisesRegex(validator.InvalidBundle, 'Missing Mach-O'):
             validator.validate(self.app)
 
-    def test_minimum_required(self):
+    def test_minimum_required(self) -> None:
         del self.info['MinimumOSVersion']
         self.write_info()
         with self.assertRaisesRegex(validator.InvalidBundle, 'Invalid OS version'):
             validator.validate(self.app)
 
-    def test_device_plist_rejected(self):
+    def test_device_plist_rejected(self) -> None:
         self.info['CFBundleSupportedPlatforms'] = ['iPhoneOS']
         self.write_info()
         with self.assertRaisesRegex(validator.InvalidBundle, 'iPhoneSimulator'):
             validator.validate(self.app)
 
-    def test_executable_path_escape_rejected(self):
+    def test_executable_path_escape_rejected(self) -> None:
         self.info['CFBundleExecutable'] = '../simulator'
         self.write_info()
         with self.assertRaisesRegex(validator.InvalidBundle, 'invalid executable name'):
             validator.validate(self.app)
 
-    def test_symlink_escape_rejected(self):
+    def test_symlink_escape_rejected(self) -> None:
         (self.app / 'outside').symlink_to(self.base / 'simulator')
         with self.assertRaisesRegex(validator.InvalidBundle, 'Symlink escapes'):
             validator.validate(self.app)
 
-    def test_higher_embedded_minimum_reported(self):
+    def test_higher_embedded_minimum_reported(self) -> None:
         self.info['MinimumOSVersion'] = '16.0'
         self.write_info()
         self.assertEqual(validator.validate(self.app)[2], (17, 0, 0))
 
-    def manifest(self, deployment='17.0', minimum=None):
+    def manifest(self, deployment: str = '17.0', minimum: Optional[str] = None) -> Path:
         directory = Path(self.work.name) / 'example'
         directory.mkdir()
         (directory / 'build.sh').write_text('#!/bin/bash\n')
         path = directory / 'manifest.yaml'
-        data = dict(
+        data: dict[str, Any] = dict(
             id='example', name='Example',
             source=dict(repository='https://example.com/apps/example', version='v1.0.0', revision='a' * 40),
             build=dict(script='build.sh', deploymentTarget=deployment))
@@ -157,21 +162,21 @@ fi
         path.write_text(json.dumps(data))
         return path
 
-    def test_manifest_uses_binary_floor_without_compatibility(self):
+    def test_manifest_uses_binary_floor_without_compatibility(self) -> None:
         info, _, minimum = validator.validate(self.app)
         self.assertEqual(validator.check_manifest(self.manifest(), info, minimum), '17.0')
 
-    def test_manifest_accepts_higher_explicit_minimum(self):
+    def test_manifest_accepts_higher_explicit_minimum(self) -> None:
         info, _, minimum = validator.validate(self.app)
         self.assertEqual(validator.check_manifest(self.manifest(minimum='27.0'), info, minimum), '27.0')
 
-    def test_omitted_compatibility_keeps_embedded_binary_requirement(self):
+    def test_omitted_compatibility_keeps_embedded_binary_requirement(self) -> None:
         self.info['MinimumOSVersion'] = '16.0'
         self.write_info()
         info, _, minimum = validator.validate(self.app)
         self.assertEqual(validator.check_manifest(self.manifest(deployment='16.0'), info, minimum), '17.0')
 
-    def test_manifest_rejects_app_version_drift(self):
+    def test_manifest_rejects_app_version_drift(self) -> None:
         path = self.manifest()
         manifest = json.loads(path.read_text())
         manifest['source']['version'] = 'v2.0.0'
@@ -180,12 +185,12 @@ fi
         with self.assertRaisesRegex(validator.InvalidBundle, 'App version.*differs'):
             validator.check_manifest(path, info, minimum)
 
-    def test_manifest_rejects_deployment_drift(self):
+    def test_manifest_rejects_deployment_drift(self) -> None:
         info, _, minimum = validator.validate(self.app)
         with self.assertRaisesRegex(validator.InvalidBundle, 'deployment target.*differs'):
             validator.check_manifest(self.manifest(deployment='16.0'), info, minimum)
 
-    def test_manifest_rejects_understated_binary_minimum(self):
+    def test_manifest_rejects_understated_binary_minimum(self) -> None:
         self.info['MinimumOSVersion'] = '16.0'
         self.write_info()
         info, _, minimum = validator.validate(self.app)

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Inspect actual App Bundle binaries. Does not certify Flutter build mode."""
+from __future__ import annotations
+
 import argparse
 import os
 from pathlib import Path
@@ -7,23 +9,37 @@ import plistlib
 import re
 import subprocess
 import sys
+from typing import Any, TypedDict, Union, cast
+
+
+OSVersion = tuple[int, int, int]
+
+
+class BundleInfo(TypedDict):
+    CFBundleIdentifier: str
+    CFBundleShortVersionString: str
+    CFBundleVersion: str
+    CFBundleExecutable: str
+    MinimumOSVersion: str
+    CFBundleSupportedPlatforms: list[str]
 
 
 class InvalidBundle(ValueError):
     pass
 
 
-def run(*args):
+def run(*args: str) -> str:
     return subprocess.check_output(args, text=True, stderr=subprocess.PIPE).strip()
 
 
-def version(value):
+def version(value: object) -> OSVersion:
     if not isinstance(value, str) or not re.fullmatch(r"\d+(?:\.\d+){0,2}", value):
         raise InvalidBundle(f"Invalid OS version: {value!r}")
     parts = tuple(map(int, value.split('.')))
     if not any(parts):
         raise InvalidBundle(f"Invalid OS version: {value!r}")
-    return parts + (0,) * (3 - len(parts))
+    padded = parts + (0,) * (3 - len(parts))
+    return padded[0], padded[1], padded[2]
 
 
 MACH_MAGICS = {
@@ -34,16 +50,16 @@ MACH_MAGICS = {
 }
 
 
-def validate(app):
+def validate(app: Union[str, Path]) -> tuple[BundleInfo, list[Path], OSVersion]:
     app = Path(app).resolve(strict=True)
     if app.suffix != '.app' or not app.is_dir():
         raise InvalidBundle('Expected an existing .app directory')
-    required_binaries = set()
-    minimums = []
-    root_info = None
+    required_binaries: set[Path] = set()
+    minimums: list[OSVersion] = []
+    root_info: BundleInfo
     for bundle in [app, *app.rglob('*.appex'), *app.rglob('*.framework')]:
         with (bundle / 'Info.plist').open('rb') as f:
-            info = plistlib.load(f)
+            info: dict[str, Any] = plistlib.load(f)
         for field in ('CFBundleIdentifier', 'CFBundleShortVersionString', 'CFBundleVersion', 'CFBundleExecutable'):
             if not isinstance(info.get(field), str) or not info[field].strip():
                 raise InvalidBundle(f'{bundle.name}: missing/invalid {field}')
@@ -61,7 +77,7 @@ def validate(app):
             if info.get('CFBundleSupportedPlatforms') != ['iPhoneSimulator']:
                 raise InvalidBundle(f'{bundle.name}: expected iPhoneSimulator platform')
         if bundle == app:
-            root_info = info
+            root_info = cast(BundleInfo, info)
 
     binaries = []
     for path in sorted(app.rglob('*')):
@@ -94,7 +110,7 @@ def validate(app):
     return root_info, binaries, max(minimums)
 
 
-def check_manifest(path, info, binary_minimum):
+def check_manifest(path: Union[str, Path], info: BundleInfo, binary_minimum: OSVersion) -> str:
     """Check app version and build/runtime floors against a valid recipe."""
     from manifest import ManifestError, load_manifest
 
@@ -121,7 +137,7 @@ def check_manifest(path, info, binary_minimum):
     return f'{major}.{minor}' + (f'.{patch}' if patch else '')
 
 
-def main():
+def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('app', type=Path)
     parser.add_argument('--manifest', type=Path, help='Check build/runtime floors against an application manifest')

@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """Read and validate an app recipe without evaluating YAML objects or aliases."""
+from __future__ import annotations
+
 import argparse
+from collections.abc import Hashable
 import json
 from pathlib import Path
 import re
 import sys
+from typing import Optional, TypedDict, Union, cast
 from urllib.parse import urlsplit
 
 import yaml
@@ -14,27 +18,55 @@ class ManifestError(ValueError):
     pass
 
 
+class Source(TypedDict):
+    repository: str
+    version: str
+    revision: str
+
+
+class Build(TypedDict):
+    script: str
+    deploymentTarget: str
+
+
+class Compatibility(TypedDict):
+    minSimulatorOS: str
+
+
+class RequiredManifest(TypedDict):
+    id: str
+    name: str
+    source: Source
+    build: Build
+
+
+class Manifest(RequiredManifest, total=False):
+    compatibility: Compatibility
+
+
 class ManifestLoader(yaml.SafeLoader):
-    def compose_node(self, parent, index):
+    def compose_node(self, parent: Optional[yaml.Node], index: Union[int, yaml.Node, None]) -> Optional[yaml.Node]:
         if self.check_event(yaml.AliasEvent):
             raise ManifestError('YAML aliases are not allowed')
-        return super().compose_node(parent, index)
+        # PyYAML also passes mapping key nodes and None; its stubs only accept int.
+        return super().compose_node(parent, index)  # type: ignore[arg-type]
 
-    def construct_mapping(self, node, deep=False):
+    def construct_mapping(self, node: yaml.Node, deep: bool = False) -> dict[Hashable, object]:
         if not isinstance(node, yaml.MappingNode):
             raise ManifestError('YAML mappings must contain key/value pairs')
-        result = {}
+        result: dict[Hashable, object] = {}
         for key_node, value_node in node.value:
             if key_node.tag != 'tag:yaml.org,2002:str':
                 raise ManifestError('YAML mapping keys must be strings')
-            key = self.construct_object(key_node, deep=deep)
+            key = cast(str, self.construct_object(key_node, deep=deep))
             if key in result:
                 raise ManifestError('Duplicate YAML mapping key')
             result[key] = self.construct_object(value_node, deep=deep)
         return result
 
 
-def mapping(value, required, context, optional=()):
+def mapping(value: object, required: tuple[str, ...], context: str,
+            optional: tuple[str, ...] = ()) -> dict[str, object]:
     if not isinstance(value, dict):
         raise ManifestError(f'{context} must be a mapping')
     for key in required:
@@ -43,23 +75,25 @@ def mapping(value, required, context, optional=()):
     unknown = value.keys() - set(required) - set(optional)
     if unknown:
         raise ManifestError(f"{context}: unknown fields {', '.join(sorted(unknown))}")
+    return cast('dict[str, object]', value)
 
 
-def string(value, context):
+def string(value: object, context: str) -> str:
     if not isinstance(value, str) or not value.strip() or value != value.strip() or re.search(r'[\r\n\x00]', value):
         raise ManifestError(f'{context} must be a nonempty string')
     return value
 
 
-def os_version(value, context):
-    string(value, context)
+def os_version(value: object, context: str) -> tuple[int, int, int]:
+    value = string(value, context)
     if not re.fullmatch(r'[1-9]\d*(?:\.\d+){0,2}', value):
         raise ManifestError(f'{context} must be an OS version string')
     parts = tuple(map(int, value.split('.')))
-    return parts + (0,) * (3 - len(parts))
+    padded = parts + (0,) * (3 - len(parts))
+    return padded[0], padded[1], padded[2]
 
 
-def load_manifest(path):
+def load_manifest(path: Union[str, Path]) -> Manifest:
     path = Path(path).absolute()
     try:
         documents = list(yaml.load_all(path.read_text(), Loader=ManifestLoader))
@@ -67,8 +101,7 @@ def load_manifest(path):
         raise ManifestError(str(e)) from e
     if len(documents) != 1:
         raise ManifestError('Expected exactly one YAML document')
-    data = documents[0]
-    mapping(data, ('id', 'name', 'source', 'build'), 'manifest', ('compatibility',))
+    data = mapping(documents[0], ('id', 'name', 'source', 'build'), 'manifest', ('compatibility',))
     app_id = string(data['id'], 'id')
     if not re.fullmatch(r'[a-z][a-z0-9-]*', app_id):
         raise ManifestError('id must contain lowercase letters, digits or hyphens')
@@ -76,8 +109,7 @@ def load_manifest(path):
         raise ManifestError('id must match the application directory')
     string(data['name'], 'name')
 
-    source = data['source']
-    mapping(source, ('repository', 'version', 'revision'), 'source')
+    source = mapping(data['source'], ('repository', 'version', 'revision'), 'source')
     repository = string(source['repository'], 'source.repository')
     try:
         url = urlsplit(repository)
@@ -93,8 +125,7 @@ def load_manifest(path):
     if not re.fullmatch(r'[0-9a-f]{40}', revision):
         raise ManifestError('source.revision must be a full 40-character lowercase Git commit')
 
-    build = data['build']
-    mapping(build, ('script', 'deploymentTarget'), 'build')
+    build = mapping(data['build'], ('script', 'deploymentTarget'), 'build')
     script = string(build['script'], 'build.script')
     if Path(script).is_absolute() or any(part in ('.', '..') for part in script.split('/')):
         raise ManifestError('build.script must stay inside the application directory')
@@ -105,15 +136,14 @@ def load_manifest(path):
     deployment = os_version(build['deploymentTarget'], 'build.deploymentTarget')
 
     if 'compatibility' in data:
-        compatibility = data['compatibility']
-        mapping(compatibility, ('minSimulatorOS',), 'compatibility')
+        compatibility = mapping(data['compatibility'], ('minSimulatorOS',), 'compatibility')
         minimum = os_version(compatibility['minSimulatorOS'], 'compatibility.minSimulatorOS')
         if minimum < deployment:
             raise ManifestError('minSimulatorOS must not be below build.deploymentTarget')
-    return data
+    return cast(Manifest, data)
 
 
-def main():
+def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('manifest', type=Path)
     parser.add_argument('--field', help='Print one string field without shell evaluation')
@@ -121,7 +151,7 @@ def main():
     try:
         data = load_manifest(args.manifest)
         if args.field:
-            value = data
+            value: object = data
             for key in args.field.split('.'):
                 if not isinstance(value, dict) or key not in value:
                     raise ManifestError(f'Unknown field: {args.field}')

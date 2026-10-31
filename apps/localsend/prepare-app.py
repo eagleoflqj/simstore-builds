@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
 """Normalize, optionally strip, and re-sign a staging App Bundle."""
+from __future__ import annotations
+
 import argparse
 import os
 from pathlib import Path
 import stat
 import sys
 import tempfile
+from typing import Union
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'scripts'))
 from validate import MACH_MAGICS, run, validate
 
 
-def prepare(app, strip_symbols=False):
+def prepare(app: Union[str, Path], strip_symbols: bool = False) -> None:
     app = Path(app).resolve(strict=True)
     if app.suffix != '.app' or not app.is_dir():
         raise ValueError('Expected an existing .app directory')
