@@ -1,0 +1,157 @@
+"""Exercise the YAML recipe boundary through its public command-line interface."""
+import copy
+import json
+from pathlib import Path
+import subprocess
+import tempfile
+import unittest
+
+APP = Path(__file__).resolve().parents[1]
+READER = APP / 'manifest.rb'
+
+
+class ManifestTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.recipe = json.loads(subprocess.check_output(
+            ['ruby', str(READER), str(APP / 'manifest.yaml')], text=True))
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix='simstore-manifest-')
+        self.directory = Path(self.temp.name) / 'localsend'
+        self.directory.mkdir()
+        (self.directory / 'build.sh').write_text('#!/bin/bash\n')
+        self.path = self.directory / 'manifest.yaml'
+        self.data = copy.deepcopy(self.recipe)
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def read(self, raw=None, field=None):
+        self.path.write_text(json.dumps(self.data) if raw is None else raw)
+        args = ['ruby', str(READER), str(self.path)]
+        if field:
+            args += ['--field', field]
+        return subprocess.run(args, capture_output=True, text=True)
+
+    def assert_rejected(self, text, raw=None):
+        result = self.read(raw=raw)
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        self.assertIn(text, result.stderr)
+
+    def test_checked_in_recipe(self):
+        result = self.read()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout), self.data)
+        self.assertNotIn('compatibility', self.data)
+
+    def test_minimum_required_when_compatibility_present(self):
+        self.data['compatibility'] = {}
+        self.assert_rejected('minSimulatorOS is required')
+
+    def test_version_must_be_quoted_string(self):
+        self.data['compatibility'] = dict(minSimulatorOS=27.0)
+        self.assert_rejected('must be a nonempty string')
+
+    def test_invalid_versions(self):
+        for value in ('', '0.0', '27.beta', '27.0.1.2', ' 27.0'):
+            with self.subTest(value=value):
+                self.data['compatibility'] = dict(minSimulatorOS=value)
+                self.assert_rejected('Manifest FAILED')
+
+    def test_commit_must_be_immutable(self):
+        for value in ('main', 'v1.18.2', 'af0416b'):
+            with self.subTest(value=value):
+                self.data['source']['revision'] = value
+                self.assert_rejected('full 40-character')
+
+    def test_release_version_can_have_v_prefix(self):
+        for value in ('v1.18.2', '1.18.2', 'v0.0.0', '0.1.0'):
+            with self.subTest(value=value):
+                self.data['source']['version'] = value
+                result = self.read(field='source.version')
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout.strip(), value)
+
+    def test_release_version_required(self):
+        del self.data['source']['version']
+        self.assert_rejected('source.version is required')
+
+    def test_nonstandard_release_version_rejected(self):
+        for value in ('v1.18.2-rc1', 'release-1.18.2', '1.18', 'v01.18.2', '1.018.2', '1.18.02'):
+            with self.subTest(value=value):
+                self.data['source']['version'] = value
+                self.assert_rejected('stable [v]MAJOR.MINOR.PATCH')
+
+    def test_old_tag_field_rejected(self):
+        self.data['source']['tag'] = self.data['source']['version']
+        self.assert_rejected('unknown fields tag')
+
+    def test_repository_credentials_rejected(self):
+        self.data['source']['repository'] = 'https://user:secret@example.com/app.git'
+        self.assert_rejected('without credentials')
+
+    def test_architecture_field_rejected(self):
+        self.data['build']['architecture'] = 'arm64'
+        self.assert_rejected('unknown fields architecture')
+
+    def test_minimum_below_deployment_rejected(self):
+        self.data['compatibility'] = dict(minSimulatorOS='15.0')
+        self.assert_rejected('below build.deploymentTarget')
+
+    def test_minimum_accepts_deployment_or_higher_without_test_record(self):
+        for value in ('16.0', '27.0'):
+            with self.subTest(value=value):
+                self.data['compatibility'] = dict(minSimulatorOS=value)
+                result = self.read()
+                self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_removed_tested_field_rejected(self):
+        self.data['compatibility'] = dict(minSimulatorOS='16.0', testedSimulatorOS=['27.0'])
+        self.assert_rejected('unknown fields testedSimulatorOS')
+
+    def test_compatibility_must_be_mapping_if_present(self):
+        for value in (None, [], '16.0'):
+            with self.subTest(value=value):
+                self.data['compatibility'] = value
+                self.assert_rejected('compatibility must be a mapping')
+
+    def test_script_path_escape_rejected(self):
+        self.data['build']['script'] = '../build.sh'
+        self.assert_rejected('inside the application directory')
+
+    def test_script_symlink_escape_rejected(self):
+        outside = Path(self.temp.name) / 'outside.sh'
+        outside.write_text('#!/bin/bash\n')
+        (self.directory / 'escape.sh').symlink_to(outside)
+        self.data['build']['script'] = 'escape.sh'
+        self.assert_rejected('inside the application directory')
+
+    def test_duplicate_yaml_key_rejected(self):
+        self.assert_rejected('Duplicate YAML', raw='id: localsend\nid: other\n')
+
+    def test_multiple_documents_rejected(self):
+        self.assert_rejected('exactly one YAML document', raw='---\nid: localsend\n---\nid: other\n')
+
+    def test_yaml_alias_rejected(self):
+        self.assert_rejected('aliases are not allowed', raw='id: &name localsend\nname: *name\n')
+
+    def test_yaml_object_rejected(self):
+        self.assert_rejected('Manifest FAILED', raw='--- !ruby/object:Object {}\n')
+
+    def test_field_is_data_not_shell_code(self):
+        marker = Path(self.temp.name) / 'executed'
+        self.data['name'] = f'$(touch {marker})'
+        result = self.read(field='name')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.strip(), self.data['name'])
+        self.assertFalse(marker.exists())
+
+    def test_unknown_field_query_rejected(self):
+        result = self.read(field='source.branch')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('Unknown field', result.stderr)
+
+
+if __name__ == '__main__':
+    unittest.main()
