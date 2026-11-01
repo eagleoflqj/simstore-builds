@@ -19,7 +19,6 @@ The main catalog and release fragments use the same structure:
       "versions": [
         {
           "version": "1.2.3",
-          "buildNumber": "7",
           "minSimulatorOS": "17.0",
           "sha256": "<archive SHA-256>",
           "size": 123456,
@@ -35,6 +34,6 @@ The main catalog and release fragments use the same structure:
 }
 ```
 
-A fragment contains one app and one version. Merge apps by `id` and versions by `version`, preserving other apps and historical versions. Versions contain three numeric components without a `v` prefix; compare their components numerically. `buildNumber` is the app's `CFBundleVersion`, while `recipeRevision` identifies the recipe commit used for the build.
+A fragment contains one app and one version. Merge apps by `id` and versions by `version`, preserving other apps and historical versions. Versions contain three numeric components without a `v` prefix; compare their components numerically. `recipeRevision` identifies the recipe commit used for the build.
 
 `minSimulatorOS` is the highest requirement from the built app and its embedded binaries, unless the manifest declares a higher minimum. `sha256` describes the compressed archive and `size` is its size in bytes.

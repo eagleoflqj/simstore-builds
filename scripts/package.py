@@ -23,7 +23,6 @@ class Source(TypedDict):
 
 class AppVersion(TypedDict):
     version: str
-    buildNumber: str
     minSimulatorOS: str
     sha256: str
     size: int
@@ -70,7 +69,6 @@ def package(manifest_path: Path, app: Path, output: Path, recipe_revision: str) 
         tar.add(app, arcname=app.name)
     record: AppVersion = {
         'version': version,
-        'buildNumber': info['CFBundleVersion'],
         'minSimulatorOS': minimum,
         'sha256': sha256(archive),
         'size': archive.stat().st_size,
