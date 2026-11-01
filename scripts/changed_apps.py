@@ -15,20 +15,17 @@ def select_projects(root: Path, paths: list[str], project_id: str = '') -> list[
         if project_id not in available:
             raise ValueError(f'Unknown project: {project_id}')
         return [project_id]
-    shared = ('scripts/', 'tests/', '.github/workflows/')
-    settings = {'requirements.txt', 'requirements-dev.txt', 'mypy.ini'}
-    if any(path.startswith(shared) or path in settings for path in paths):
-        return sorted(available)
     return sorted({parts[1] for path in paths if len(parts := path.split('/')) >= 3
                    and parts[0] == 'apps' and parts[1] in available})
 
 
 def changed_paths(root: Path, base: str, head: str, event: str) -> list[str]:
     if not base or set(base) == {'0'}:
-        return ['scripts/']
-    comparison = f'{base}...{head}' if event == 'pull_request' else f'{base}..{head}'
-    output = subprocess.check_output(['git', '-C', str(root), 'diff', '--name-only', '--no-renames', '-z',
-                                      comparison, '--'])
+        command = ['git', '-C', str(root), 'ls-tree', '-r', '--name-only', '-z', head, '--', 'apps/']
+    else:
+        comparison = f'{base}...{head}' if event == 'pull_request' else f'{base}..{head}'
+        command = ['git', '-C', str(root), 'diff', '--name-only', '--no-renames', '-z', comparison, '--', 'apps/']
+    output = subprocess.check_output(command)
     return [path.decode() for path in output.split(b'\0') if path]
 
 

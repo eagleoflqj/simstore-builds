@@ -1,4 +1,4 @@
-"""Check app selection for isolated recipes and shared contract changes."""
+"""Check that only changes within app directories select automatic builds."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -26,11 +26,14 @@ class ChangedAppsTests(unittest.TestCase):
     def test_only_changed_recipe_is_selected(self) -> None:
         self.assertEqual(select_projects(self.root, ['apps/beta/build.sh']), ['beta'])
 
-    def test_shared_changes_select_independent_jobs_for_all_apps(self) -> None:
+    def test_shared_changes_do_not_select_apps(self) -> None:
         for path in ('scripts/package.py', 'tests/test_package.py', '.github/workflows/build.yml',
                      'requirements.txt', 'requirements-dev.txt', 'mypy.ini'):
             with self.subTest(path=path):
-                self.assertEqual(select_projects(self.root, [path]), ['alpha', 'beta'])
+                self.assertEqual(select_projects(self.root, [path]), [])
+
+    def test_shared_changes_do_not_expand_changed_recipe_selection(self) -> None:
+        self.assertEqual(select_projects(self.root, ['scripts/package.py', 'apps/beta/build.sh']), ['beta'])
 
     def test_documentation_does_not_rebuild_apps(self) -> None:
         self.assertEqual(select_projects(self.root, ['README.md', 'AGENTS.md', 'LICENSE']), [])
@@ -64,14 +67,22 @@ class ChangedAppsTests(unittest.TestCase):
         self.git('config', 'user.email', 'test@example.com')
         initial = self.commit('apps/alpha/manifest.yaml')
         self.git('checkout', '-b', 'feature')
+        (self.root / 'scripts').mkdir()
+        (self.root / 'scripts/shared.py').write_text('# Shared tooling change\n')
         head = self.commit('apps/alpha/manifest.yaml')
         self.git('checkout', 'main')
         base = self.commit('apps/beta/manifest.yaml')
         self.assertEqual(changed_paths(self.root, base, head, 'pull_request'), ['apps/alpha/manifest.yaml'])
         self.assertEqual(changed_paths(self.root, initial, base, 'push'), ['apps/beta/manifest.yaml'])
 
-    def test_first_push_builds_all_projects(self) -> None:
+    def test_first_push_selects_only_tracked_app_paths(self) -> None:
+        self.git('init', '--initial-branch=main')
+        self.git('config', 'user.name', 'Test')
+        self.git('config', 'user.email', 'test@example.com')
+        (self.root / 'README.md').write_text('Example repository\n')
+        self.commit('apps/alpha/manifest.yaml')
         paths = changed_paths(self.root, '0' * 40, 'HEAD', 'push')
+        self.assertEqual(paths, ['apps/alpha/manifest.yaml', 'apps/beta/manifest.yaml'])
         self.assertEqual(select_projects(self.root, paths), ['alpha', 'beta'])
 
 
