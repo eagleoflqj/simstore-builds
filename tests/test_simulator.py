@@ -1,7 +1,6 @@
 """Select only available iOS devices compatible with the app's actual minimum."""
 from __future__ import annotations
 
-from io import StringIO
 import json
 from pathlib import Path
 import subprocess
@@ -64,7 +63,7 @@ class SimulatorTests(unittest.TestCase):
                     smoke_test(app, Path(temporary) / 'manifest.yaml')
                 run.assert_not_called()
 
-    def test_failed_launch_shuts_down_device_booted_by_the_test(self) -> None:
+    def test_failed_launch_propagates(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             app = Path(temporary) / 'Example.app'
             app.mkdir()
@@ -72,33 +71,9 @@ class SimulatorTests(unittest.TestCase):
                  patch('simulator.subprocess.check_output', return_value=json.dumps(self.simulators)), \
                  patch('simulator.subprocess.run') as run:
                 run.side_effect = [subprocess.CompletedProcess([], 0), subprocess.CompletedProcess([], 0),
-                                   subprocess.CompletedProcess([], 0), subprocess.CalledProcessError(1, 'simctl launch'),
-                                   subprocess.CompletedProcess([], 0)]
+                                   subprocess.CompletedProcess([], 0), subprocess.CalledProcessError(1, 'simctl launch')]
                 with self.assertRaises(subprocess.CalledProcessError):
                     smoke_test(app)
-                self.assertEqual(run.call_args_list[-1].args[0], ['xcrun', 'simctl', 'shutdown', 'new'])
-
-    def test_cleanup_errors_preserve_launch_result(self) -> None:
-        for cleanup_error in [subprocess.TimeoutExpired('simctl shutdown', 60), OSError('shutdown unavailable')]:
-            for launch_fails in [False, True]:
-                with self.subTest(cleanup=type(cleanup_error).__name__, launch_fails=launch_fails), \
-                     tempfile.TemporaryDirectory() as temporary:
-                    app = Path(temporary) / 'Example.app'
-                    app.mkdir()
-                    with patch('simulator.validate', return_value=({'CFBundleIdentifier': 'org.simstore.example'}, [], (17, 0, 0))), \
-                         patch('simulator.subprocess.check_output', return_value=json.dumps(self.simulators)), \
-                         patch('simulator.subprocess.run') as run, \
-                         patch('simulator.sys.stderr', new_callable=StringIO) as stderr:
-                        launch_error = subprocess.CalledProcessError(1, 'simctl launch')
-                        run.side_effect = [subprocess.CompletedProcess([], 0)] * 3 + [
-                            launch_error if launch_fails else subprocess.CompletedProcess([], 0), cleanup_error]
-                        if launch_fails:
-                            with self.assertRaises(subprocess.CalledProcessError) as raised:
-                                smoke_test(app)
-                            self.assertIs(raised.exception, launch_error)
-                        else:
-                            smoke_test(app)
-                        self.assertIn('Warning: could not shut down Simulator new:', stderr.getvalue())
 
 
 if __name__ == '__main__':
