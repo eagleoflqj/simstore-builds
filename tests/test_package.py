@@ -16,6 +16,7 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 from package import package
 from validate import InvalidBundle, run, validate
+from test_icons import write_png
 
 
 class PackageTests(unittest.TestCase):
@@ -45,7 +46,7 @@ class PackageTests(unittest.TestCase):
         self.manifest = recipe / 'manifest.yaml'
         self.data: dict[str, Any] = {
             'id': 'example', 'name': 'Example',
-            'source': {'repository': 'https://example.com/app', 'version': 'v1.2.3', 'revision': 'a' * 40},
+            'source': {'repository': 'https://example.com/app', 'version': 'v1.2.3', 'revision': 'a' * 40, 'license': 'MIT'},
             'build': {'script': 'build.sh', 'deploymentTarget': '17.0'},
         }
         self.manifest.write_text(json.dumps(self.data))
@@ -56,11 +57,13 @@ class PackageTests(unittest.TestCase):
         (self.app / 'assets/data').write_bytes(b'resource contents\n')
         (self.app / 'assets/data').chmod(0o664)
         (self.app / 'data-link').symlink_to('assets/data')
+        write_png(self.app / 'AppIcon.png', 24)
         with (self.app / 'Info.plist').open('wb') as stream:
             plistlib.dump(dict(CFBundleIdentifier='org.simstore.example', CFBundleExecutable='Fixture',
                               CFBundlePackageType='APPL', CFBundleName='Example',
                               CFBundleShortVersionString='1.2.3', CFBundleVersion='7', MinimumOSVersion='17.0',
-                              CFBundleSupportedPlatforms=['iPhoneSimulator']), stream)
+                              CFBundleSupportedPlatforms=['iPhoneSimulator'],
+                              CFBundleIcons={'CFBundlePrimaryIcon': {'CFBundleIconFiles': ['AppIcon']}}), stream)
         subprocess.run(['codesign', '--force', '--sign', '-', '--timestamp=none', str(self.app)],
                        check=True, capture_output=True)
         self.output = self.directory / 'artifacts'
@@ -81,9 +84,13 @@ class PackageTests(unittest.TestCase):
         self.assertEqual(record['sha256'], hashlib.sha256(archive.read_bytes()).hexdigest())
         self.assertEqual(record['size'], archive.stat().st_size)
         self.assertEqual((record['version'], record['minSimulatorOS']), ('1.2.3', '17.0'))
-        self.assertEqual(record['source'], {'repository': 'https://example.com/app', 'revision': 'a' * 40})
+        self.assertEqual((app['repository'], app['license']), ('https://example.com/app', 'MIT'))
+        self.assertEqual(record['revision'], 'a' * 40)
+        self.assertNotIn('source', record)
+        self.assertNotIn('repository', record)
+        self.assertNotIn('license', record)
         self.assertEqual(record['recipeRevision'], 'b' * 40)
-        self.assertEqual(sorted(path.name for path in self.output.iterdir()), [archive.name, 'index.json'])
+        self.assertEqual(sorted(path.name for path in self.output.iterdir()), [archive.name, 'icon.png', 'index.json'])
 
     def test_extracted_archive_preserves_symlinks_executable_and_signature(self) -> None:
         package(self.manifest, self.app, self.output, 'b' * 40)

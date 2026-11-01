@@ -3,14 +3,6 @@
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
 start_build "$@"
-checkout_clean() {
-  checkout "$@"
-  local dest=$3
-  [[ -z $(git -C "$dest" status --porcelain --untracked-files=normal) ]] || {
-    echo "Modified checkout at $dest; refusing to overwrite it." >&2
-    exit 1
-  }
-}
 checkout_clean "$repository" "$revision" "$work/localsend"
 checkout_clean https://github.com/flutter/flutter.git "$FLUTTER_REVISION" "$work/flutter"
 # Flutter derives its SDK version from Git tags, including in shallow checkouts.
@@ -36,7 +28,7 @@ cd "$work/localsend/app"
 "$flutter" pub get --enforce-lockfile
 bundle exec "$flutter" build ios --simulator --debug --config-only --no-codesign --no-pub
 xcrun xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner \
-  -configuration Debug "${simulator_settings[@]}" FLUTTER_BUILD_MODE=debug build \
+  -configuration Debug "${simulator_settings[@]}" -derivedDataPath "$work/derived-data" FLUTTER_BUILD_MODE=debug build \
   > "$work/logs/xcode-debug.log" 2>&1 || {
     tail -n 60 "$work/logs/xcode-debug.log"
     exit 1

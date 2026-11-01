@@ -21,11 +21,18 @@ from test_catalog import fragment
 def release(tag: str = 'example/1.2.3') -> updater.Release:
     return {'id': 1, 'tag_name': tag, 'draft': False, 'prerelease': False, 'immutable': False,
             'assets': [{'id': 10, 'name': 'index.json', 'state': 'uploaded', 'size': 456, 'digest': None},
-                       {'id': 11, 'name': 'example.app.tar.bz2', 'state': 'uploaded', 'size': 123,
+                       {'id': 11, 'name': f'{tag.split("/")[0]}.app.tar.bz2', 'state': 'uploaded', 'size': 123,
                         'digest': 'sha256:' + 'c' * 64}]}
 
 
 class CollectionTests(unittest.TestCase):
+    def test_empty_license_is_rejected(self) -> None:
+        invalid = fragment()
+        invalid['apps'][0]['license'] = ''
+        with patch.object(updater, 'api_json', return_value=invalid):
+            with self.assertRaisesRegex(CatalogError, 'license'):
+                updater.collect_index([release()])
+
     def test_pagination_keeps_releases_beyond_first_page(self) -> None:
         releases = [release(f'example/1.0.{patch_number}') for patch_number in range(101)]
         with patch.object(updater, 'gh', return_value=json.dumps([releases[:100], releases[100:]])) as gh:
@@ -75,7 +82,7 @@ class CollectionTests(unittest.TestCase):
                 with self.assertRaises(CatalogError):
                     updater.collect_index([data])
 
-    def test_legacy_asset_without_api_digest_is_supported(self) -> None:
+    def test_asset_without_api_digest_is_supported(self) -> None:
         data = release()
         data['assets'][1]['digest'] = None
         with patch.object(updater, 'api_json', return_value=fragment()):

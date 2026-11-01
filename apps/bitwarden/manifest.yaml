@@ -1,6 +1,7 @@
 id: bitwarden
 name: Bitwarden
 source:
+  license: GPL-3.0-only
   repository: https://github.com/bitwarden/ios
   version: v2026.10.1
   revision: 779a17564dd4279568d7e9258d261209a8192894

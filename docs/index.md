@@ -16,16 +16,15 @@ The main catalog and release fragments use the same structure:
       "id": "example",
       "name": "Example",
       "bundleID": "org.example.app",
+      "repository": "https://github.com/owner/example",
+      "license": "MIT",
       "versions": [
         {
           "version": "1.2.3",
           "minSimulatorOS": "17.0",
           "sha256": "<archive SHA-256>",
           "size": 123456,
-          "source": {
-            "repository": "https://github.com/owner/example",
-            "revision": "<full upstream commit>"
-          },
+          "revision": "<full upstream commit>",
           "recipeRevision": "<full simstore-builds commit>"
         }
       ]
@@ -38,9 +37,11 @@ A fragment contains one app and one version. Merge apps by `id` and versions by 
 
 `minSimulatorOS` is the highest requirement from the built app and its embedded binaries, unless the manifest declares a higher minimum. `sha256` describes the compressed archive and `size` is its size in bytes.
 
+`repository` and `license` belong to the app; the newest published version supplies both values for the whole app. `license` is required and contains the upstream repository's primary SPDX identifier for display; validation only requires a nonempty string. Each version's `revision` identifies its upstream source commit. These fields use the same validation rules as the recipe manifest's `source` fields.
+
 ## Updating the catalog
 
-Run the `Update catalog` workflow manually. It scans every page of published app Releases, reads their `index.json` fragments, and checks archive presence, upload status, size, and the GitHub SHA-256 digest when available. Drafts, prereleases, unrelated tags, and the `latest` Release are excluded. The merged catalog contains all published app versions, sorted newest first by numeric version; apps are sorted by ID. The newest version supplies the display name, while conflicting Bundle IDs or version records stop publication.
+Run the `Update catalog` workflow manually. It scans every page of published app Releases, validates their `index.json` fragments against the current format, and checks archive presence, upload status, size, and the GitHub SHA-256 digest when available. Drafts, prereleases, unrelated tags, and the `latest` Release are excluded. The merged catalog contains all published app versions, sorted newest first by numeric version; apps are sorted by ID. The newest version supplies the display name, repository, and license, while conflicting Bundle IDs or version records stop publication.
 
 Every run uploads the merged `index.json` as a workflow artifact. Runs on `main` also create or update the mutable Release tagged `latest`. Runs on other refs only produce the artifact. Catalog updates are serialized. An updated asset is uploaded under a temporary name and verified before replacing `index.json`; the previous asset is retained until the replacement succeeds, with a rollback attempt if the rename fails. An unchanged catalog keeps its existing asset.
 

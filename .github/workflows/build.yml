@@ -79,6 +79,7 @@ jobs:
           path: |
             apps/${{ matrix.id }}/build/artifacts/${{ matrix.id }}.app.tar.bz2
             apps/${{ matrix.id }}/build/artifacts/index.json
+            apps/${{ matrix.id }}/build/artifacts/icon.png
           compression-level: 0
           if-no-files-found: error
       - name: Install and launch the archived app
@@ -114,5 +115,5 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           tag=$(jq -er --arg id "$PROJECT_ID" '.apps[0] | select(.id == $id) | .id + "/" + .versions[0].version' release/index.json)
-          gh release create "$tag" "release/$PROJECT_ID.app.tar.bz2" release/index.json \
+          gh release create "$tag" "release/$PROJECT_ID.app.tar.bz2" release/index.json release/icon.png \
             --target "$GITHUB_SHA" --title "$tag" --notes "arm64 iOS Simulator build" --latest=false

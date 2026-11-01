@@ -12,6 +12,7 @@ import sys
 import tarfile
 
 from catalog import AppVersion, Index
+from icons import export_icon
 from manifest import ManifestError, load_manifest
 from validate import InvalidBundle, check_manifest, validate
 
@@ -38,6 +39,8 @@ def package(manifest_path: Path, app: Path, output: Path, recipe_revision: str) 
     version = manifest['source']['version'].removeprefix('v')
     filename = f"{manifest['id']}.app.tar.bz2"
     output.mkdir(parents=True, exist_ok=True)
+    icon = output / 'icon.png'
+    export_icon(app, icon)
     archive = output / filename
     with tarfile.open(archive, 'w:bz2', dereference=False) as tar:
         tar.add(app, arcname=app.name)
@@ -46,17 +49,19 @@ def package(manifest_path: Path, app: Path, output: Path, recipe_revision: str) 
         'minSimulatorOS': minimum,
         'sha256': sha256(archive),
         'size': archive.stat().st_size,
-        'source': {'repository': manifest['source']['repository'], 'revision': manifest['source']['revision']},
+        'revision': manifest['source']['revision'],
         'recipeRevision': recipe_revision,
     }
     index: Index = {
         'schemaVersion': 1,
         'apps': [{'id': manifest['id'], 'name': manifest['name'], 'bundleID': info['CFBundleIdentifier'],
+                  'repository': manifest['source']['repository'], 'license': manifest['source']['license'],
                   'versions': [record]}],
     }
     (output / 'index.json').write_text(json.dumps(index, indent=2) + '\n')
     print(f'Archive: {archive}')
     print(f'Index: {output / "index.json"}')
+    print(f'Icon: {icon}')
     return index
 
 

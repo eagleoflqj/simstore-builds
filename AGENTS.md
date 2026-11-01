@@ -11,6 +11,7 @@
 - Use `scripts/build.py <id>` as the common entry point for one recipe. Recipe scripts must be executable, accept no arguments, and produce exactly one `.app` directory under `apps/<id>/build/output/`. Keep the GitHub Actions workflow independent of individual apps. Automatically select app jobs only from changes under `apps/<id>/`; ignore changes to shared tooling.
 - Keep Manifest-spec parsing, App Bundle validation, Simulator smoke checks, and their tests at repository level. These tools validate common input and output contracts independently of app build systems.
 - Pin upstream source to the full commit of a stable release and use that revision's required toolchain. Maintain necessary source changes as patches.
+- Set `source.license` to the upstream repository's primary SPDX license identifier for display. Validate it only as a nonempty string; do not combine dependency or resource licenses into this value.
 - Support only Apple Silicon macOS and arm64 iOS Simulator apps. Do not produce x86_64 or Universal apps. Validate the Mach-O platform as well as the CPU architecture.
 - Derive the default compatibility minimum from the built app's deployment requirements. Set `compatibility.minSimulatorOS` only when an additional restriction is needed; the entire section may be omitted. Compilation success does not replace installation, launch, or functional testing.
 - Re-sign modified binaries and preserve resources, plugins, and entitlements. Stripping must preserve symbols used at runtime.
