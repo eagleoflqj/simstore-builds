@@ -77,9 +77,9 @@ staging=$(mktemp -d "$work/stage.XXXXXX")
 trap 'rm -rf "$staging"' EXIT
 ditto "$app" "$staging/LocalSend.app"
 if [[ "$strip_symbols" == true ]]; then
-  python3 "$app_dir/prepare-app.py" "$staging/LocalSend.app" --strip
+  python3 "$repo_dir/scripts/prepare_app.py" "$staging/LocalSend.app" --strip
 else
-  python3 "$app_dir/prepare-app.py" "$staging/LocalSend.app"
+  python3 "$repo_dir/scripts/prepare_app.py" "$staging/LocalSend.app"
 fi
 python3 "$repo_dir/scripts/validate.py" "$staging/LocalSend.app" --manifest "$manifest" | tee "$work/logs/validation.log"
 mkdir -p "$work/output"

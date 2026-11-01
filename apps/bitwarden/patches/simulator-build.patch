@@ -1,0 +1,57 @@
+diff --git a/Bitwarden/Application/Services/ErrorReporter/ErrorReporterFactory.swift b/Bitwarden/Application/Services/ErrorReporter/ErrorReporterFactory.swift
+index 466f598..153c2c2 100644
+--- a/Bitwarden/Application/Services/ErrorReporter/ErrorReporterFactory.swift
++++ b/Bitwarden/Application/Services/ErrorReporter/ErrorReporterFactory.swift
+@@ -7,7 +7,7 @@ enum ErrorReporterFactory {
+ 
+     /// Creates the default error reporter.
+     static func makeDefaultErrorReporter() -> ErrorReporter {
+-        #if DEBUG
++        #if DEBUG || targetEnvironment(simulator)
+         OSLogErrorReporter()
+         #else
+         CrashlyticsErrorReporter.shared
+diff --git a/Scripts/generate-mocks.sh b/Scripts/generate-mocks.sh
+index 3dac99d..6bb8e97 100755
+--- a/Scripts/generate-mocks.sh
++++ b/Scripts/generate-mocks.sh
+@@ -67,4 +67,4 @@ if [ -z "${BITWARDEN_SDK_PATH:-}" ]; then
+ fi
+ 
+ echo "BITWARDEN_SDK_PATH: $BITWARDEN_SDK_PATH"
+-mint run sourcery --config "$CONFIG"
++sourcery --config "$CONFIG"
+diff --git a/project-bwk.yml b/project-bwk.yml
+index e1321ed..12239b7 100644
+--- a/project-bwk.yml
++++ b/project-bwk.yml
+@@ -243,7 +243,7 @@ targets:
+           if [[ ! "$PATH" =~ "/opt/homebrew/bin" ]]; then
+             PATH="/opt/homebrew/bin:$PATH"
+           fi
+-          mint run swiftgen config run --config "swiftgen-bwr.yml"
++          swiftgen config run --config "swiftgen-bwr.yml"
+         basedOnDependencyAnalysis: false
+         outputFiles:
+           - $(SRCROOT)/BitwardenResources/Generated/Fonts.swift
+diff --git a/project-pm.yml b/project-pm.yml
+index 479c8b3..6d7d9ea 100644
+--- a/project-pm.yml
++++ b/project-pm.yml
+@@ -176,7 +176,6 @@ targets:
+       - target: BitwardenAutoFillExtension
+       - target: BitwardenNotificationExtension
+       - target: BitwardenShareExtension
+-      - target: BitwardenWatchApp
+       - target: BitwardenKit/AuthenticatorBridgeKit
+       - target: BitwardenKit/BitwardenKit
+       - target: BitwardenKit/BitwardenResources
+@@ -386,7 +385,7 @@ targets:
+           if [[ ! "$PATH" =~ "/opt/homebrew/bin" ]]; then
+             PATH="/opt/homebrew/bin:$PATH"
+           fi
+-          mint run swiftgen config run --config "swiftgen-pm.yml"
++          swiftgen config run --config "swiftgen-pm.yml"
+         basedOnDependencyAnalysis: false
+         outputFiles:
+           - $(SRCROOT)/BitwardenShared/UI/Platform/Application/Support/Generated/Assets.swift

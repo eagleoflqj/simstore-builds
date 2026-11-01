@@ -6,10 +6,8 @@ import argparse
 import os
 from pathlib import Path
 import stat
-import sys
 import tempfile
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'scripts'))
 from validate import MACH_MAGICS, run, validate
 
 
@@ -48,11 +46,13 @@ def prepare(app: str | Path, strip_symbols: bool = False) -> None:
         for relative in binaries:
             path = app / relative
             before = path.stat().st_size
-            # Keep exported symbols required by Dart FFI/dlsym and native plugins.
-            exports = set(run('xcrun', 'nm', '-gUj', str(path)).splitlines())
+            # Check both tables separately; nm's dyld-symbol merge is slow on large SDKs.
+            symbols = set(run('xcrun', 'nm', '-gUjp', '--no-dyldinfo', str(path)).splitlines())
+            exports = run('xcrun', 'dyld_info', '-exports', str(path))
             run('xcrun', 'strip', '-S', '-x', str(path))
-            if exports != set(run('xcrun', 'nm', '-gUj', str(path)).splitlines()):
-                raise ValueError(f'Strip changed global defined symbols: {relative}')
+            if (symbols != set(run('xcrun', 'nm', '-gUjp', '--no-dyldinfo', str(path)).splitlines())
+                    or exports != run('xcrun', 'dyld_info', '-exports', str(path))):
+                raise ValueError(f'Strip changed global defined symbols or dyld exports: {relative}')
             print(f'Stripped {relative}: {before} -> {path.stat().st_size} bytes')
         validate(app)
     bundles = sorted([*app.rglob('*.framework'), *app.rglob('*.appex')],
