@@ -73,6 +73,7 @@ jobs:
           PROJECT_ID: ${{ matrix.id }}
         run: python3 scripts/build.py "$PROJECT_ID"
       - name: Install and launch the archived app
+        timeout-minutes: 20
         env:
           PROJECT_ID: ${{ matrix.id }}
         run: |
