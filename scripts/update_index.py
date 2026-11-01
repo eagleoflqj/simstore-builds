@@ -114,7 +114,7 @@ def collect_index(releases: list[Release]) -> Index:
 
 
 def index_bytes(index: Index) -> bytes:
-    return (json.dumps(index, indent=2) + '\n').encode()
+    return (json.dumps(index, ensure_ascii=False, indent=2) + '\n').encode('utf-8')
 
 
 def generate_index(output: Path) -> Index:

@@ -127,6 +127,10 @@ class PublishingTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.temporary.cleanup()
 
+    def test_catalog_contains_literal_utf8_translations(self) -> None:
+        self.assertIn('示例应用。'.encode('utf-8'), self.payload)
+        self.assertEqual(json.loads(self.payload.decode('utf-8')), catalog())
+
     def test_initial_release_uploads_asset_named_index_json(self) -> None:
         def create(*args: str) -> str:
             self.assertEqual(args[:3], ('release', 'create', 'latest'))
