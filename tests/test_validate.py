@@ -95,7 +95,7 @@ fi
                 calls = [[arg.decode() for arg in line.rstrip(b'\0').split(b'\0')]
                          for line in log.read_bytes().splitlines()]
                 self.assertEqual(calls, [
-                    ['simctl', 'install', target, str(self.app)],
+                    ['simctl', 'install', target, str(self.app.resolve())],
                     ['simctl', 'launch', '--terminate-running-process', target, 'org.simstore.fixture'],
                 ])
 
