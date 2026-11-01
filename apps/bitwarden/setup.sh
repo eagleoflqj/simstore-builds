@@ -1,10 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
-if [[ ! -x "$repo_dir/build/python/bin/python3" ]]; then
-  python3 -m venv "$repo_dir/build/python"
-fi
-python3 -m pip install -r "$repo_dir/requirements.txt"
+setup_python
 install_tool() {
   local name=$1 repository=$2 version=$3 filename=$4 digest=$5 executable=$6
   local directory="$work/tools/$name"
