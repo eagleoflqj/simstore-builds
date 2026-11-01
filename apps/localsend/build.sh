@@ -37,6 +37,12 @@ checkout() {
 }
 checkout "$LOCALSEND_REPOSITORY" "$LOCALSEND_REVISION" "$work/localsend"
 checkout https://github.com/flutter/flutter.git "$FLUTTER_REVISION" "$work/flutter"
+# Flutter derives its SDK version from Git tags, including in shallow checkouts.
+git -C "$work/flutter" fetch --depth 1 origin "refs/tags/$FLUTTER_VERSION:refs/tags/$FLUTTER_VERSION"
+[[ $(git -C "$work/flutter" rev-parse "$FLUTTER_VERSION^{commit}") == "$FLUTTER_REVISION" ]] || {
+  echo 'Flutter release tag does not match the pinned commit.' >&2
+  exit 1
+}
 python3 - "$work/localsend" "$FLUTTER_VERSION" "$RUST_VERSION" <<'PY'
 import json, pathlib, re, sys
 source = pathlib.Path(sys.argv[1])
