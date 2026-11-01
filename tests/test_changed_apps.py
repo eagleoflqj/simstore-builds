@@ -1,0 +1,79 @@
+"""Check app selection for isolated recipes and shared contract changes."""
+from __future__ import annotations
+
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+import unittest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
+from changed_apps import changed_paths, select_projects
+
+
+class ChangedAppsTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temporary = tempfile.TemporaryDirectory()
+        self.root = Path(self.temporary.name)
+        for name in ('alpha', 'beta'):
+            directory = self.root / 'apps' / name
+            directory.mkdir(parents=True)
+            (directory / 'manifest.yaml').write_text('{}\n')
+
+    def tearDown(self) -> None:
+        self.temporary.cleanup()
+
+    def test_only_changed_recipe_is_selected(self) -> None:
+        self.assertEqual(select_projects(self.root, ['apps/beta/build.sh']), ['beta'])
+
+    def test_shared_changes_select_independent_jobs_for_all_apps(self) -> None:
+        for path in ('scripts/package.py', 'tests/test_package.py', '.github/workflows/build.yml',
+                     'requirements.txt', 'requirements-dev.txt', 'mypy.ini'):
+            with self.subTest(path=path):
+                self.assertEqual(select_projects(self.root, [path]), ['alpha', 'beta'])
+
+    def test_documentation_does_not_rebuild_apps(self) -> None:
+        self.assertEqual(select_projects(self.root, ['README.md', 'AGENTS.md', 'LICENSE']), [])
+
+    def test_deleted_and_incomplete_recipes_are_skipped(self) -> None:
+        (self.root / 'apps/beta/manifest.yaml').unlink()
+        self.assertEqual(select_projects(self.root, ['apps/beta/manifest.yaml', 'apps/unknown/build.sh']), [])
+
+    def test_manual_selection_builds_only_requested_app(self) -> None:
+        self.assertEqual(select_projects(self.root, ['scripts/build.py'], 'beta'), ['beta'])
+
+    def test_manual_selection_rejects_unknown_or_escaping_ids(self) -> None:
+        for project_id in ('unknown', '../alpha', '/tmp/alpha'):
+            with self.subTest(project_id=project_id), self.assertRaises(ValueError):
+                select_projects(self.root, [], project_id)
+
+    def git(self, *args: str) -> str:
+        return subprocess.check_output(['git', '-C', str(self.root), *args], text=True,
+                                       stderr=subprocess.PIPE).strip()
+
+    def commit(self, path: str) -> str:
+        target = self.root / path
+        target.write_text(target.read_text() + '\n')
+        self.git('add', '.')
+        self.git('commit', '-m', 'fixture')
+        return self.git('rev-parse', 'HEAD')
+
+    def test_pr_diff_excludes_new_base_branch_changes(self) -> None:
+        self.git('init', '--initial-branch=main')
+        self.git('config', 'user.name', 'Test')
+        self.git('config', 'user.email', 'test@example.com')
+        initial = self.commit('apps/alpha/manifest.yaml')
+        self.git('checkout', '-b', 'feature')
+        head = self.commit('apps/alpha/manifest.yaml')
+        self.git('checkout', 'main')
+        base = self.commit('apps/beta/manifest.yaml')
+        self.assertEqual(changed_paths(self.root, base, head, 'pull_request'), ['apps/alpha/manifest.yaml'])
+        self.assertEqual(changed_paths(self.root, initial, base, 'push'), ['apps/beta/manifest.yaml'])
+
+    def test_first_push_builds_all_projects(self) -> None:
+        paths = changed_paths(self.root, '0' * 40, 'HEAD', 'push')
+        self.assertEqual(select_projects(self.root, paths), ['alpha', 'beta'])
+
+
+if __name__ == '__main__':
+    unittest.main()

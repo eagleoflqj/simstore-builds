@@ -1,0 +1,39 @@
+# Catalog format
+
+Each app release contains an `<id>.app.tar.bz2` archive and an `index.json` fragment. The archive contains one complete `.app` directory. Release tags use `<id>/<version>`, with any leading `v` removed from the upstream version. In download URLs, encode the slash inside the tag as `%2F`.
+
+Extract with `tar -xjpf <archive>` to preserve file permissions and symlinks.
+
+The main catalog and release fragments use the same structure:
+
+```json
+{
+  "schemaVersion": 1,
+  "apps": [
+    {
+      "id": "example",
+      "name": "Example",
+      "bundleID": "org.example.app",
+      "versions": [
+        {
+          "version": "1.2.3",
+          "buildNumber": "7",
+          "minSimulatorOS": "17.0",
+          "downloadURL": "https://github.com/owner/builds/releases/download/example%2F1.2.3/example.app.tar.bz2",
+          "sha256": "<archive SHA-256>",
+          "size": 123456,
+          "source": {
+            "repository": "https://github.com/owner/example",
+            "revision": "<full upstream commit>"
+          },
+          "recipeRevision": "<full simstore-builds commit>"
+        }
+      ]
+    }
+  ]
+}
+```
+
+A fragment contains one app and one version. Merge apps by `id` and versions by `version`, preserving other apps and historical versions. Versions contain three numeric components without a `v` prefix; compare their components numerically. `buildNumber` is the app's `CFBundleVersion`, while `recipeRevision` identifies the recipe commit used for the build.
+
+`minSimulatorOS` is the highest requirement from the built app and its embedded binaries, unless the manifest declares a higher minimum. `sha256` describes the compressed archive and `size` is its size in bytes. A fragment produced for a PR or manual workflow run describes the prospective Release URL; the URL becomes available after publication from a push to `main`.

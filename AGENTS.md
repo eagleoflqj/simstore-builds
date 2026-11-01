@@ -8,6 +8,7 @@
 - Use Python for maintained parsing and validation tools. Keep Ruby limited to CocoaPods dependency setup.
 - Annotate Python function parameters and return values, including test helpers. Use `|` for union types and `T | None` for optional values with `from __future__ import annotations`. Install `requirements-dev.txt` and run `python3 -m mypy` and `python3 -m unittest discover -s tests -v` when changing Python code.
 - Build and run CI for each app independently. Keep app-specific environment setup, compilation, and artifact preparation in the app's directory. Do not add a batch build entry point. Extract shared build steps only when at least two apps actually share an operation.
+- Use `scripts/build.py <id>` as the common entry point for one recipe. Recipe scripts must be executable, accept no arguments, and produce exactly one `.app` directory under `apps/<id>/build/output/`. Keep the GitHub Actions workflow independent of individual apps and select separate jobs from changed recipes; shared tooling changes select all recipes.
 - Keep Manifest-spec parsing, App Bundle validation, Simulator smoke checks, and their tests at repository level. These tools validate common input and output contracts independently of app build systems.
 - Pin upstream source to the full commit of a stable release and use that revision's required toolchain. Maintain necessary source changes as patches.
 - Support only Apple Silicon macOS and arm64 iOS Simulator apps. Do not produce x86_64 or Universal apps. Validate the Mach-O platform as well as the CPU architecture.
