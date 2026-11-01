@@ -12,6 +12,7 @@ import sys
 import tarfile
 
 from catalog import AppVersion, Index
+from icons import export_icon
 from manifest import ManifestError, load_manifest
 from validate import InvalidBundle, check_manifest, validate
 
@@ -38,6 +39,8 @@ def package(manifest_path: Path, app: Path, output: Path, recipe_revision: str) 
     version = manifest['source']['version'].removeprefix('v')
     filename = f"{manifest['id']}.app.tar.bz2"
     output.mkdir(parents=True, exist_ok=True)
+    icon = output / 'icon.png'
+    export_icon(app, icon)
     archive = output / filename
     with tarfile.open(archive, 'w:bz2', dereference=False) as tar:
         tar.add(app, arcname=app.name)
@@ -57,6 +60,7 @@ def package(manifest_path: Path, app: Path, output: Path, recipe_revision: str) 
     (output / 'index.json').write_text(json.dumps(index, indent=2) + '\n')
     print(f'Archive: {archive}')
     print(f'Index: {output / "index.json"}')
+    print(f'Icon: {icon}')
     return index
 
 
