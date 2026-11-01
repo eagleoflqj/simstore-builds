@@ -10,36 +10,10 @@ import re
 import subprocess
 import sys
 import tarfile
-from typing import TypedDict
 
+from catalog import AppVersion, Index
 from manifest import ManifestError, load_manifest
 from validate import InvalidBundle, check_manifest, validate
-
-
-class Source(TypedDict):
-    repository: str
-    revision: str
-
-
-class AppVersion(TypedDict):
-    version: str
-    minSimulatorOS: str
-    sha256: str
-    size: int
-    source: Source
-    recipeRevision: str
-
-
-class App(TypedDict):
-    id: str
-    name: str
-    bundleID: str
-    versions: list[AppVersion]
-
-
-class Index(TypedDict):
-    schemaVersion: int
-    apps: list[App]
 
 
 def sha256(path: Path) -> str:
