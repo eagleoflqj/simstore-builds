@@ -69,15 +69,14 @@ class PackageTests(unittest.TestCase):
         self.work.cleanup()
 
     def test_catalog_fragment_describes_archive_and_source(self) -> None:
-        index = package(self.manifest, self.app, self.output, 'owner/builds', 'b' * 40)
+        index = package(self.manifest, self.app, self.output, 'b' * 40)
         self.assertEqual(json.loads((self.output / 'index.json').read_text()), index)
         self.assertEqual(index['schemaVersion'], 1)
         app = index['apps'][0]
         self.assertEqual((app['id'], app['name'], app['bundleID']), ('example', 'Example', 'org.simstore.example'))
         record = app['versions'][0]
         archive = self.output / 'example.app.tar.bz2'
-        self.assertEqual(record['downloadURL'],
-                         'https://github.com/owner/builds/releases/download/example%2F1.2.3/example.app.tar.bz2')
+        self.assertNotIn('downloadURL', record)
         self.assertEqual(record['sha256'], hashlib.sha256(archive.read_bytes()).hexdigest())
         self.assertEqual(record['size'], archive.stat().st_size)
         self.assertEqual((record['version'], record['buildNumber'], record['minSimulatorOS']), ('1.2.3', '7', '17.0'))
@@ -86,7 +85,7 @@ class PackageTests(unittest.TestCase):
         self.assertEqual(sorted(path.name for path in self.output.iterdir()), [archive.name, 'index.json'])
 
     def test_extracted_archive_preserves_symlinks_executable_and_signature(self) -> None:
-        package(self.manifest, self.app, self.output, 'owner/builds', 'b' * 40)
+        package(self.manifest, self.app, self.output, 'b' * 40)
         archive = self.output / 'example.app.tar.bz2'
         with tarfile.open(archive, 'r:bz2') as tar:
             self.assertTrue(tar.getmember('Example.app/data-link').issym())
@@ -107,23 +106,22 @@ class PackageTests(unittest.TestCase):
         self.data['source']['version'] = '2.0.0'
         self.manifest.write_text(json.dumps(self.data))
         with self.assertRaisesRegex(InvalidBundle, 'differs from manifest'):
-            package(self.manifest, self.app, self.output, 'owner/builds', 'b' * 40)
+            package(self.manifest, self.app, self.output, 'b' * 40)
         self.assertFalse(self.output.exists())
 
     def test_unsigned_app_is_not_packaged(self) -> None:
         subprocess.run(['codesign', '--remove-signature', str(self.app)], check=True)
         with self.assertRaises(subprocess.CalledProcessError):
-            package(self.manifest, self.app, self.output, 'owner/builds', 'b' * 40)
+            package(self.manifest, self.app, self.output, 'b' * 40)
         self.assertFalse(self.output.exists())
 
     def test_output_must_be_outside_the_app(self) -> None:
         with self.assertRaisesRegex(ValueError, 'outside'):
-            package(self.manifest, self.app, self.app / 'artifacts', 'owner/builds', 'b' * 40)
+            package(self.manifest, self.app, self.app / 'artifacts', 'b' * 40)
 
-    def test_release_repository_and_recipe_commit_are_validated(self) -> None:
-        for repository, revision in (('https://example.com', 'b' * 40), ('owner/builds', 'main')):
-            with self.subTest(repository=repository, revision=revision), self.assertRaises(ValueError):
-                package(self.manifest, self.app, self.output, repository, revision)
+    def test_recipe_commit_is_validated(self) -> None:
+        with self.assertRaisesRegex(ValueError, 'full recipe Git commit'):
+            package(self.manifest, self.app, self.output, 'main')
 
 
 if __name__ == '__main__':

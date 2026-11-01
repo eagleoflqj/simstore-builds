@@ -38,9 +38,9 @@ class BuildTests(unittest.TestCase):
 
     def test_dispatches_non_shell_recipe_and_packages_its_app(self) -> None:
         with patch.object(builder, 'package') as package:
-            builder.build(self.root, 'example', 'owner/builds')
+            builder.build(self.root, 'example')
         package.assert_called_once_with(self.manifest, self.directory / 'build/output/Example.app',
-                                        self.directory / 'build/artifacts', 'owner/builds',
+                                        self.directory / 'build/artifacts',
                                         subprocess.check_output(['git', '-C', str(self.root), 'rev-parse', 'HEAD'],
                                                                 text=True).strip())
 
@@ -50,17 +50,17 @@ class BuildTests(unittest.TestCase):
                 self.script.write_text('#!/usr/bin/env python3\nfrom pathlib import Path\n' +
                                        ''.join(f'Path("build/output/{name}").mkdir(parents=True)\n' for name in names))
                 with patch.object(builder, 'package') as package, self.assertRaisesRegex(ValueError, 'exactly one'):
-                    builder.build(self.root, 'example', 'owner/builds')
+                    builder.build(self.root, 'example')
                 package.assert_not_called()
 
     def test_rejects_escaping_project_id(self) -> None:
         with self.assertRaisesRegex(ValueError, 'Invalid project id'):
-            builder.build(self.root, '../example', 'owner/builds')
+            builder.build(self.root, '../example')
 
     def test_failed_recipe_does_not_package(self) -> None:
         self.script.write_text('#!/usr/bin/env python3\nraise SystemExit(1)\n')
         with patch.object(builder, 'package') as package, self.assertRaises(subprocess.CalledProcessError):
-            builder.build(self.root, 'example', 'owner/builds')
+            builder.build(self.root, 'example')
         package.assert_not_called()
 
 

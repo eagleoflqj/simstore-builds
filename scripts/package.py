@@ -11,7 +11,6 @@ import subprocess
 import sys
 import tarfile
 from typing import TypedDict
-from urllib.parse import quote
 
 from manifest import ManifestError, load_manifest
 from validate import InvalidBundle, check_manifest, validate
@@ -26,7 +25,6 @@ class AppVersion(TypedDict):
     version: str
     buildNumber: str
     minSimulatorOS: str
-    downloadURL: str
     sha256: str
     size: int
     source: Source
@@ -53,9 +51,7 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def package(manifest_path: Path, app: Path, output: Path, repository: str, recipe_revision: str) -> Index:
-    if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repository):
-        raise ValueError('Expected a GitHub owner/repository')
+def package(manifest_path: Path, app: Path, output: Path, recipe_revision: str) -> Index:
     if not re.fullmatch(r'[0-9a-f]{40}', recipe_revision):
         raise ValueError('Expected the full recipe Git commit')
     manifest = load_manifest(manifest_path)
@@ -67,7 +63,6 @@ def package(manifest_path: Path, app: Path, output: Path, repository: str, recip
     minimum = check_manifest(manifest_path, info, binary_minimum)
     subprocess.run(['codesign', '--verify', '--deep', '--strict', str(app)], check=True)
     version = manifest['source']['version'].removeprefix('v')
-    tag = f"{manifest['id']}/{version}"
     filename = f"{manifest['id']}.app.tar.bz2"
     output.mkdir(parents=True, exist_ok=True)
     archive = output / filename
@@ -77,7 +72,6 @@ def package(manifest_path: Path, app: Path, output: Path, repository: str, recip
         'version': version,
         'buildNumber': info['CFBundleVersion'],
         'minSimulatorOS': minimum,
-        'downloadURL': f'https://github.com/{repository}/releases/download/{quote(tag, safe="")}/{filename}',
         'sha256': sha256(archive),
         'size': archive.stat().st_size,
         'source': {'repository': manifest['source']['repository'], 'revision': manifest['source']['revision']},
@@ -99,11 +93,10 @@ def main() -> int:
     parser.add_argument('manifest', type=Path)
     parser.add_argument('app', type=Path)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--repository', required=True)
     parser.add_argument('--recipe-revision', required=True)
     args = parser.parse_args()
     try:
-        package(args.manifest, args.app, args.output, args.repository, args.recipe_revision)
+        package(args.manifest, args.app, args.output, args.recipe_revision)
     except (ManifestError, InvalidBundle, OSError, ValueError, subprocess.CalledProcessError) as error:
         print(f'Packaging FAILED: {error}', file=sys.stderr)
         return 1
