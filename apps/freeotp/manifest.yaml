@@ -1,0 +1,10 @@
+id: freeotp
+name: FreeOTP
+source:
+  license: Apache-2.0
+  repository: https://github.com/freeotp/freeotp-ios
+  version: v2.3.6
+  revision: 8b9c13cd20126b92b48b3694636b0c021152cae6
+build:
+  script: build.sh
+  deploymentTarget: "15.0"

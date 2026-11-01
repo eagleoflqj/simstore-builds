@@ -1,0 +1,136 @@
+diff --git a/FreeOTP.xcodeproj/project.pbxproj b/FreeOTP.xcodeproj/project.pbxproj
+index 27ced3a..3f71ea7 100644
+--- a/FreeOTP.xcodeproj/project.pbxproj
++++ b/FreeOTP.xcodeproj/project.pbxproj
+@@ -7,6 +7,7 @@
+ 	objects = {
+ 
+ /* Begin PBXBuildFile section */
++		FA6420000000000000000002 /* FontAwesome-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = FA6420000000000000000001 /* FontAwesome-LICENSE.txt */; };
+ 		2442F8142493B39000678697 /* MainNavigationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2442F8132493B39000678697 /* MainNavigationController.swift */; };
+ 		2489072324910D3B001C75A9 /* Device.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2489072224910D3A001C75A9 /* Device.swift */; };
+ 		248B998D24901AAC001235F5 /* RTLSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 248B998C24901AAC001235F5 /* RTLSupport.swift */; };
+@@ -105,6 +106,7 @@
+ /* End PBXCopyFilesBuildPhase section */
+ 
+ /* Begin PBXFileReference section */
++		FA6420000000000000000001 /* FontAwesome-LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Carthage/Fonts/FontAwesome-LICENSE.txt"; sourceTree = SOURCE_ROOT; };
+ 		2442F8132493B39000678697 /* MainNavigationController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainNavigationController.swift; sourceTree = "<group>"; };
+ 		2489072224910D3A001C75A9 /* Device.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Device.swift; sourceTree = "<group>"; };
+ 		248B998C24901AAC001235F5 /* RTLSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RTLSupport.swift; sourceTree = "<group>"; };
+@@ -155,10 +157,10 @@
+ 		282D9E432AEC0BDE000C6699 /* iTunesArtwork@2x */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iTunesArtwork@2x"; sourceTree = "<group>"; };
+ 		282D9E442AEC0BDE000C6699 /* SectionHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SectionHeader.swift; sourceTree = "<group>"; };
+ 		282D9E452AEC0C94000C6699 /* SDWebImage.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SDWebImage.framework; path = "Carthage/Build/SDWebImage.xcframework/ios-arm64_x86_64-simulator/SDWebImage.framework"; sourceTree = "<group>"; };
+-		282D9E482AEC102C000C6699 /* SDWebImage.xcframework */ = {isa = PBXFileReference; expectedSignature = "SelfSigned:B588ABD0A0B36E8D36A3056DC74DE7462F75E49E1D8303D013A994AF35C2D26F"; lastKnownFileType = wrapper.xcframework; name = SDWebImage.xcframework; path = Carthage/Build/SDWebImage.xcframework; sourceTree = "<group>"; };
+-		282F614A2AD49328008A22F6 /* fa-solid-900.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "fa-solid-900.ttf"; path = "../../../Downloads/fontawesome-free-6.4.2-web/webfonts/fa-solid-900.ttf"; sourceTree = "<group>"; };
+-		282F614B2AD49328008A22F6 /* fa-brands-400.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "fa-brands-400.ttf"; path = "../../../Downloads/fontawesome-free-6.4.2-web/webfonts/fa-brands-400.ttf"; sourceTree = "<group>"; };
+-		282F614C2AD49328008A22F6 /* fa-regular-400.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "fa-regular-400.ttf"; path = "../../../Downloads/fontawesome-free-6.4.2-web/webfonts/fa-regular-400.ttf"; sourceTree = "<group>"; };
++		282D9E482AEC102C000C6699 /* SDWebImage.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = SDWebImage.xcframework; path = Carthage/Build/SDWebImage.xcframework; sourceTree = "<group>"; };
++		282F614A2AD49328008A22F6 /* fa-solid-900.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "fa-solid-900.ttf"; path = "Carthage/Fonts/fa-solid-900.ttf"; sourceTree = SOURCE_ROOT; };
++		282F614B2AD49328008A22F6 /* fa-brands-400.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "fa-brands-400.ttf"; path = "Carthage/Fonts/fa-brands-400.ttf"; sourceTree = SOURCE_ROOT; };
++		282F614C2AD49328008A22F6 /* fa-regular-400.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "fa-regular-400.ttf"; path = "Carthage/Fonts/fa-regular-400.ttf"; sourceTree = SOURCE_ROOT; };
+ 		2832BFF6246C7F810079B2D7 /* Icon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Icon.swift; sourceTree = "<group>"; };
+ 		283FC22223F19EB600491B5E /* URIIconViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URIIconViewController.swift; sourceTree = "<group>"; };
+ 		28431EC424A257CB00D6E1CF /* AboutViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutViewController.swift; sourceTree = "<group>"; };
+@@ -564,6 +566,7 @@
+ 			isa = PBXResourcesBuildPhase;
+ 			buildActionMask = 2147483647;
+ 			files = (
++				FA6420000000000000000002 /* FontAwesome-LICENSE.txt in Resources */,
+ 				F1CA93D71B56AB9500828B8B /* iTunesArtwork@2x in Resources */,
+ 				F10D88CB1B56A3C400482D15 /* Assets.xcassets in Resources */,
+ 				F1CA93D91B56AB9500828B8B /* qrcode.png in Resources */,
+diff --git a/FreeOTP/AppDelegate.swift b/FreeOTP/AppDelegate.swift
+index 0c1cb57..4b290fa 100644
+--- a/FreeOTP/AppDelegate.swift
++++ b/FreeOTP/AppDelegate.swift
+@@ -22,31 +22,38 @@ import Foundation
+ import UIKit
+ 
+ @UIApplicationMain
+-class AppDelegate : UIResponder, UIApplicationDelegate {
++class AppDelegate: UIResponder, UIApplicationDelegate {
++    func application(_ application: UIApplication,
++                     configurationForConnecting connectingSceneSession: UISceneSession,
++                     options: UIScene.ConnectionOptions) -> UISceneConfiguration {
++        return UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
++    }
++}
++
++class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+     var window: UIWindow?
+ 
+-    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+-        if let window = UIApplication.shared.windows.first as UIWindow? {
+-            window.backgroundColor = UIColor.app.background
+-        }
+-        return true
++    func scene(_ scene: UIScene, willConnectTo session: UISceneSession,
++               options connectionOptions: UIScene.ConnectionOptions) {
++        window?.backgroundColor = UIColor.app.background
++        openURLs(connectionOptions.urlContexts)
+     }
+ 
+-    func application(_ application: UIApplication, willFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+-        return true
++    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
++        openURLs(URLContexts)
+     }
+ 
+-    func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any]) -> Bool {
+-        if let urlc = URLComponents(url: url, resolvingAgainstBaseURL: true) {
+-            let navigationController = app.windows[0].rootViewController as! UINavigationController
+-            if let scanvc = UIStoryboard(name: "Main", bundle: nil).instantiateViewController(withIdentifier: "scan") as? ScanViewController {
+-                scanvc.urlc = urlc
+-                scanvc.urlSent = true
+-                navigationController.pushViewController(scanvc, animated: true)
+-                return true
++    private func openURLs(_ contexts: Set<UIOpenURLContext>) {
++        for context in contexts {
++            guard let urlc = URLComponents(url: context.url, resolvingAgainstBaseURL: true),
++                  let navigationController = window?.rootViewController as? UINavigationController,
++                  let scanvc = UIStoryboard(name: "Main", bundle: nil)
++                    .instantiateViewController(withIdentifier: "scan") as? ScanViewController else {
++                continue
+             }
++            scanvc.urlc = urlc
++            scanvc.urlSent = true
++            navigationController.pushViewController(scanvc, animated: true)
+         }
+-
+-        return false
+     }
+ }
+diff --git a/FreeOTP/Info.plist b/FreeOTP/Info.plist
+index fcefa75..b08c7fa 100644
+--- a/FreeOTP/Info.plist
++++ b/FreeOTP/Info.plist
+@@ -59,8 +59,25 @@
+ 	<string>$(PRODUCT_NAME) requests access to the Photo Library to select token key image</string>
+ 	<key>UILaunchStoryboardName</key>
+ 	<string>Launch</string>
+-	<key>UIMainStoryboardFile</key>
+-	<string>Main</string>
++	<key>UIApplicationSceneManifest</key>
++	<dict>
++		<key>UIApplicationSupportsMultipleScenes</key>
++		<false/>
++		<key>UISceneConfigurations</key>
++		<dict>
++			<key>UIWindowSceneSessionRoleApplication</key>
++			<array>
++				<dict>
++					<key>UISceneConfigurationName</key>
++					<string>Default Configuration</string>
++					<key>UISceneDelegateClassName</key>
++					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
++					<key>UISceneStoryboardFile</key>
++					<string>Main</string>
++				</dict>
++			</array>
++		</dict>
++	</dict>
+ 	<key>UISupportedInterfaceOrientations</key>
+ 	<array>
+ 		<string>UIInterfaceOrientationPortrait</string>
