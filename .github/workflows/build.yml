@@ -72,6 +72,15 @@ jobs:
         env:
           PROJECT_ID: ${{ matrix.id }}
         run: python3 scripts/build.py "$PROJECT_ID"
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ matrix.id }}
+          path: |
+            apps/${{ matrix.id }}/build/artifacts/${{ matrix.id }}.app.tar.bz2
+            apps/${{ matrix.id }}/build/artifacts/index.json
+          compression-level: 0
+          if-no-files-found: error
       - name: Install and launch the archived app
         timeout-minutes: 20
         env:
@@ -81,15 +90,6 @@ jobs:
           tar -xjpf "apps/$PROJECT_ID/build/artifacts/$PROJECT_ID.app.tar.bz2" -C "$RUNNER_TEMP/smoke"
           apps=("$RUNNER_TEMP/smoke/"*.app)
           python3 scripts/simulator.py "${apps[0]}" --manifest "apps/$PROJECT_ID/manifest.yaml"
-      - name: Upload release artifacts
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: ${{ matrix.id }}
-          path: |
-            apps/${{ matrix.id }}/build/artifacts/${{ matrix.id }}.app.tar.bz2
-            apps/${{ matrix.id }}/build/artifacts/index.json
-          compression-level: 0
-          if-no-files-found: error
 
   publish:
     needs: [select, build]
