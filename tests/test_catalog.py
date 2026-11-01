@@ -38,6 +38,31 @@ class CatalogTests(unittest.TestCase):
                 with self.assertRaisesRegex(CatalogError, 'unknown fields unexpected'):
                     validate_index(data)
 
+    def test_final_catalog_requires_localized_descriptions(self) -> None:
+        with self.assertRaisesRegex(CatalogError, 'description'):
+            validate_index(fragment(), require_descriptions=True)
+        data = fragment()
+        data['apps'][0]['description'] = {'en': 'An example application.', 'zh-Hans': '示例应用。'}
+        self.assertEqual(validate_index(data, require_descriptions=True), data)
+        self.assertEqual(merge_indexes([validate_index(data, require_descriptions=True)]), data)
+
+    def test_invalid_localized_descriptions_are_rejected(self) -> None:
+        value: object
+        for value in (None, '', [], {}, {'zh-Hans': '示例应用。'}, {'en': ''}, {'en': 1},
+                      {'en': 'Example.', 'zh-Hans': None}, {'en': 'Example.', '': 'Example.'}):
+            with self.subTest(value=value):
+                data = json.loads(json.dumps(fragment()))
+                data['apps'][0]['description'] = value
+                with self.assertRaisesRegex(CatalogError, 'description'):
+                    validate_index(data, require_descriptions=True)
+
+    def test_conflicting_localized_descriptions_fail(self) -> None:
+        first, second = fragment(), fragment(version='2.0.0')
+        first['apps'][0]['description'] = {'en': 'Example.'}
+        second['apps'][0]['description'] = {'en': 'Another description.'}
+        with self.assertRaisesRegex(CatalogError, 'conflicting descriptions'):
+            merge_indexes([first, second])
+
     def test_merge_preserves_history_and_sorts_versions_numerically(self) -> None:
         fragments = [fragment('beta', '1.9.0', 'Old name'), fragment('alpha', '2.0.0'),
                      fragment('beta', '1.10.0', 'New name'), fragment('beta', '1.0.0')]

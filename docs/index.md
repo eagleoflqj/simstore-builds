@@ -6,7 +6,7 @@ The client uses a fixed builds repository and reads the merged catalog from `rel
 
 Extract with `tar -xjpf <archive>` to preserve file permissions and symlinks.
 
-The main catalog and release fragments use the same structure:
+The main catalog uses this structure. Release fragments omit the app-level `description` field:
 
 ```json
 {
@@ -15,6 +15,10 @@ The main catalog and release fragments use the same structure:
     {
       "id": "example",
       "name": "Example",
+      "description": {
+        "en": "An example application.",
+        "zh-Hans": "示例应用。"
+      },
       "bundleID": "org.example.app",
       "repository": "https://github.com/owner/example",
       "license": "MIT",
@@ -38,6 +42,19 @@ A fragment contains one app and one version. Merge apps by `id` and versions by 
 `minSimulatorOS` is the highest requirement from the built app and its embedded binaries, unless the manifest declares a higher minimum. `sha256` describes the compressed archive and `size` is its size in bytes.
 
 `repository` and `license` belong to the app; the newest published version supplies both values for the whole app. `license` is required and contains the upstream repository's primary SPDX identifier for display; validation only requires a nonempty string. Each version's `revision` identifies its upstream source commit. These fields use the same validation rules as the recipe manifest's `source` fields.
+
+## Localized descriptions
+
+Each published app must have an `apps/<id>/description.yaml` file containing a short, neutral description in each supported language:
+
+```yaml
+en: An example application.
+zh-Hans: 示例应用。
+```
+
+Use language tags such as `en`, `zh-Hans`, or `pt-BR` as keys. English (`en`) is required as the fallback; each translation must be a nonempty, single-line string. The catalog stores all translations in the app-level `description` object so the client can select the user's language.
+
+Collection reads descriptions from the current checkout after merging all release fragments. Descriptions are independent of app versions and are omitted from build fragments. Changes to `apps/<id>/description.yaml` are excluded from automatic build selection. After editing descriptions or translations, rerun the `Update catalog` workflow; rebuilding or republishing apps is unnecessary.
 
 ## Updating the catalog
 

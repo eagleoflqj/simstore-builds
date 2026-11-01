@@ -14,8 +14,16 @@ from uuid import UUID
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import update_index as updater
-from catalog import CatalogError
+from catalog import CatalogError, Index
 from test_catalog import fragment
+
+DESCRIPTION = {'en': 'An example application.', 'zh-Hans': '示例应用。'}
+
+
+def catalog() -> Index:
+    data = fragment()
+    data['apps'][0]['description'] = DESCRIPTION.copy()
+    return data
 
 
 def release(tag: str = 'example/1.2.3') -> updater.Release:
@@ -26,6 +34,11 @@ def release(tag: str = 'example/1.2.3') -> updater.Release:
 
 
 class CollectionTests(unittest.TestCase):
+    def setUp(self) -> None:
+        descriptions = patch.object(updater, 'load_description', return_value=DESCRIPTION.copy())
+        descriptions.start()
+        self.addCleanup(descriptions.stop)
+
     def test_empty_license_is_rejected(self) -> None:
         invalid = fragment()
         invalid['apps'][0]['license'] = ''
@@ -86,7 +99,7 @@ class CollectionTests(unittest.TestCase):
         data = release()
         data['assets'][1]['digest'] = None
         with patch.object(updater, 'api_json', return_value=fragment()):
-            self.assertEqual(updater.collect_index([data]), fragment())
+            self.assertEqual(updater.collect_index([data]), catalog())
 
     def test_failed_collection_preserves_previous_local_file(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -102,7 +115,7 @@ class PublishingTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
         self.path = Path(self.temporary.name) / 'catalog.json'
-        self.payload = updater.index_bytes(fragment())
+        self.payload = updater.index_bytes(catalog())
         self.path.write_bytes(self.payload)
         self.latest = release('latest')
         self.latest['assets'] = [self.latest['assets'][0]]
@@ -113,6 +126,10 @@ class PublishingTests(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.temporary.cleanup()
+
+    def test_catalog_contains_literal_utf8_translations(self) -> None:
+        self.assertIn('示例应用。'.encode('utf-8'), self.payload)
+        self.assertEqual(json.loads(self.payload.decode('utf-8')), catalog())
 
     def test_initial_release_uploads_asset_named_index_json(self) -> None:
         def create(*args: str) -> str:
@@ -221,6 +238,13 @@ class PublishingTests(unittest.TestCase):
         self.path.write_text('{"schemaVersion":2,"apps":[]}')
         with patch.object(updater, 'list_releases') as releases:
             with self.assertRaises(CatalogError):
+                updater.publish_index(self.path)
+        releases.assert_not_called()
+
+    def test_catalog_without_descriptions_is_rejected_before_api_requests(self) -> None:
+        self.path.write_bytes(updater.index_bytes(fragment()))
+        with patch.object(updater, 'list_releases') as releases:
+            with self.assertRaisesRegex(CatalogError, 'description'):
                 updater.publish_index(self.path)
         releases.assert_not_called()
 

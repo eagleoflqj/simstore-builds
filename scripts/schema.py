@@ -101,3 +101,11 @@ def validate_source(value: object) -> Source:
     return {'repository': repository(data.get('repository'), 'source.repository'),
             'revision': git_revision(data.get('revision'), 'source.revision'),
             'license': nonempty_string(data.get('license'), 'source.license')}
+
+
+def localized_description(value: object, context: str) -> dict[str, str]:
+    data = mapping(value, context)
+    if 'en' not in data:
+        raise ValidationError(f'{context}.en is required as the fallback description')
+    return {string(locale, f'{context} language'): string(text, f'{context}.{locale}')
+            for locale, text in data.items()}

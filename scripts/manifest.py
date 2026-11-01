@@ -3,16 +3,14 @@
 from __future__ import annotations
 
 import argparse
-from collections.abc import Hashable
 import json
 from pathlib import Path
 import sys
 from typing import TypedDict, cast
 
-import yaml
-
 from schema import (SOURCE_FIELDS, Source as SourceMetadata, ValidationError,
                     app_id, mapping, os_version, release_version, string, validate_source)
+from yaml_reader import load_yaml
 
 ManifestError = ValidationError
 
@@ -42,36 +40,9 @@ class Manifest(RequiredManifest, total=False):
     compatibility: Compatibility
 
 
-class ManifestLoader(yaml.SafeLoader):
-    def compose_node(self, parent: yaml.Node | None, index: int | yaml.Node | None) -> yaml.Node | None:
-        if self.check_event(yaml.AliasEvent):
-            raise ManifestError('YAML aliases are not allowed')
-        # PyYAML also passes mapping key nodes and None; its stubs only accept int.
-        return super().compose_node(parent, index)  # type: ignore[arg-type]
-
-    def construct_mapping(self, node: yaml.Node, deep: bool = False) -> dict[Hashable, object]:
-        if not isinstance(node, yaml.MappingNode):
-            raise ManifestError('YAML mappings must contain key/value pairs')
-        result: dict[Hashable, object] = {}
-        for key_node, value_node in node.value:
-            if key_node.tag != 'tag:yaml.org,2002:str':
-                raise ManifestError('YAML mapping keys must be strings')
-            key = cast(str, self.construct_object(key_node, deep=deep))
-            if key in result:
-                raise ManifestError('Duplicate YAML mapping key')
-            result[key] = self.construct_object(value_node, deep=deep)
-        return result
-
-
 def load_manifest(path: str | Path) -> Manifest:
     path = Path(path).absolute()
-    try:
-        documents = list(yaml.load_all(path.read_text(), Loader=ManifestLoader))
-    except yaml.YAMLError as e:
-        raise ManifestError(str(e)) from e
-    if len(documents) != 1:
-        raise ManifestError('Expected exactly one YAML document')
-    data = mapping(documents[0], 'manifest', ('id', 'name', 'source', 'build'), ('compatibility',))
+    data = mapping(load_yaml(path), 'manifest', ('id', 'name', 'source', 'build'), ('compatibility',))
     if app_id(data['id'], 'id') != path.parent.name:
         raise ManifestError('id must match the application directory')
     string(data['name'], 'name')
