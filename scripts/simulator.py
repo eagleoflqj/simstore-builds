@@ -71,7 +71,10 @@ def smoke_test(app: Path, manifest_path: Path | None = None, target: str | None 
         print('Install and launch commands succeeded; inspect UI and logs for runtime/plugin issues.', flush=True)
     finally:
         if not booted:
-            subprocess.run(['xcrun', 'simctl', 'shutdown', udid], check=False, timeout=60)
+            try:
+                subprocess.run(['xcrun', 'simctl', 'shutdown', udid], check=False, timeout=60)
+            except (OSError, subprocess.TimeoutExpired) as error:
+                print(f'Warning: could not shut down Simulator {udid}: {error}', file=sys.stderr, flush=True)
 
 
 def main() -> int:
