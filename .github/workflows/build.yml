@@ -1,0 +1,118 @@
+name: Build Simulator apps
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      id:
+        description: Application id under apps/
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  select:
+    runs-on: ubuntu-26.04
+    outputs:
+      projects: ${{ steps.projects.outputs.projects }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Select changed projects
+        id: projects
+        env:
+          PROJECT_ID: ${{ inputs.id }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          python3 scripts/changed_apps.py --id "$PROJECT_ID" \
+            --base "$BASE_SHA" --head "$HEAD_SHA" --event "$EVENT_NAME" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: select
+    if: needs.select.outputs.projects != '[]'
+    name: Build ${{ matrix.id }}
+    runs-on: xcode-27
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        id: ${{ fromJSON(needs.select.outputs.projects) }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.15'
+      - name: Set up shared Python tools
+        run: |
+          python3 -m venv build/python
+          build/python/bin/python3 -m pip install -r requirements-dev.txt
+          echo "$PWD/build/python/bin" >> "$GITHUB_PATH"
+      - name: Check Python tools
+        run: |
+          python3 -m mypy
+          python3 -m unittest discover -s tests -v
+      - name: Build and package
+        env:
+          PROJECT_ID: ${{ matrix.id }}
+        run: python3 scripts/build.py "$PROJECT_ID"
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ matrix.id }}
+          path: |
+            apps/${{ matrix.id }}/build/artifacts/${{ matrix.id }}.app.tar.bz2
+            apps/${{ matrix.id }}/build/artifacts/index.json
+          compression-level: 0
+          if-no-files-found: error
+      - name: Install and launch the archived app
+        timeout-minutes: 20
+        env:
+          PROJECT_ID: ${{ matrix.id }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/smoke"
+          tar -xjpf "apps/$PROJECT_ID/build/artifacts/$PROJECT_ID.app.tar.bz2" -C "$RUNNER_TEMP/smoke"
+          apps=("$RUNNER_TEMP/smoke/"*.app)
+          python3 scripts/simulator.py "${apps[0]}" --manifest "apps/$PROJECT_ID/manifest.yaml"
+
+  publish:
+    needs: [select, build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    name: Publish ${{ matrix.id }}
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        id: ${{ fromJSON(needs.select.outputs.projects) }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ matrix.id }}
+          path: release
+      - name: Create release
+        env:
+          PROJECT_ID: ${{ matrix.id }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          tag=$(jq -er --arg id "$PROJECT_ID" '.apps[0] | select(.id == $id) | .id + "/" + .versions[0].version' release/index.json)
+          gh release create "$tag" "release/$PROJECT_ID.app.tar.bz2" release/index.json \
+            --target "$GITHUB_SHA" --title "$tag" --notes "arm64 iOS Simulator build" --latest=false

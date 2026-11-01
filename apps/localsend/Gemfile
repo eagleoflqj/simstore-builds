@@ -1,0 +1,4 @@
+source 'https://rubygems.org'
+
+# Match the version recorded in LocalSend v1.18.2's Podfile.lock.
+gem 'cocoapods', '= 1.16.2'

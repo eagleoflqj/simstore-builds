@@ -1,0 +1,11 @@
+id: localsend
+name: LocalSend
+
+source:
+  repository: https://github.com/localsend/localsend
+  version: v1.18.2
+  revision: af0416be50770a97760f7070684bc667b759a15c
+
+build:
+  script: build.sh
+  deploymentTarget: "16.0"
