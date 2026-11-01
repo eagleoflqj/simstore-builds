@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   select:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       projects: ${{ steps.projects.outputs.projects }}
     steps:
@@ -58,7 +58,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          python-version: '3.13'
+          python-version: '3.15'
       - name: Set up shared Python tools
         run: |
           python3 -m venv build/python
@@ -95,7 +95,7 @@ jobs:
     needs: [select, build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     name: Publish ${{ matrix.id }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: write
     strategy:

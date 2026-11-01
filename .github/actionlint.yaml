@@ -1,4 +1,5 @@
-# Official hosted runner not yet included in actionlint's built-in label list.
+# Hosted runners not yet included in actionlint's built-in label list.
 self-hosted-runner:
   labels:
     - xcode-27
+    - ubuntu-26.04
