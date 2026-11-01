@@ -37,9 +37,9 @@ start_build() {
   deployment_target=$(manifest_field build.deploymentTarget)
   strip_symbols=$(manifest_field build.stripSymbols)
   simulator_settings=(
-    -sdk iphonesimulator -destination 'generic/platform=iOS Simulator'
+    -destination 'generic/platform=iOS Simulator'
     ARCHS=arm64 ONLY_ACTIVE_ARCH=YES
-    SUPPORTED_PLATFORMS=iphonesimulator IPHONEOS_DEPLOYMENT_TARGET="$deployment_target"
+    IPHONEOS_DEPLOYMENT_TARGET="$deployment_target"
     CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=
     COMPILER_INDEX_STORE_ENABLE=NO
   )
