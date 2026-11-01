@@ -16,7 +16,8 @@ def select_projects(root: Path, paths: list[str], project_id: str = '') -> list[
             raise ValueError(f'Unknown project: {project_id}')
         return [project_id]
     return sorted({parts[1] for path in paths if len(parts := path.split('/')) >= 3
-                   and parts[0] == 'apps' and parts[1] in available})
+                   and parts[0] == 'apps' and parts[1] in available
+                   and parts[2:] != ['description.yaml']})
 
 
 def changed_paths(root: Path, base: str, head: str, event: str) -> list[str]:

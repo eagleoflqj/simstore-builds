@@ -32,6 +32,27 @@ class ChangedAppsTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertEqual(select_projects(self.root, [path]), [])
 
+    def test_description_changes_do_not_select_apps(self) -> None:
+        self.assertEqual(select_projects(self.root, ['apps/alpha/description.yaml', 'apps/beta/description.yaml']), [])
+        self.assertEqual(select_projects(self.root, ['apps/alpha/description.yaml', 'apps/beta/build.sh']), ['beta'])
+        self.assertEqual(select_projects(self.root, ['apps/alpha/description.yaml'], 'alpha'), ['alpha'])
+
+    def test_description_filename_in_recipe_subdirectory_is_not_excluded(self) -> None:
+        self.assertEqual(select_projects(self.root, ['apps/alpha/patches/description.yaml']), ['alpha'])
+
+    def test_description_only_commit_does_not_select_pr_or_push_builds(self) -> None:
+        self.git('init', '--initial-branch=main')
+        self.git('config', 'user.name', 'Test')
+        self.git('config', 'user.email', 'test@example.com')
+        base = self.commit('apps/alpha/manifest.yaml')
+        (self.root / 'apps/alpha/description.yaml').write_text('en: Example application.\n')
+        head = self.commit('apps/alpha/description.yaml')
+        for event in ('push', 'pull_request'):
+            with self.subTest(event=event):
+                paths = changed_paths(self.root, base, head, event)
+                self.assertEqual(paths, ['apps/alpha/description.yaml'])
+                self.assertEqual(select_projects(self.root, paths), [])
+
     def test_shared_changes_do_not_expand_changed_recipe_selection(self) -> None:
         self.assertEqual(select_projects(self.root, ['scripts/package.py', 'apps/beta/build.sh']), ['beta'])
 
