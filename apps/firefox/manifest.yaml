@@ -1,0 +1,10 @@
+id: firefox
+name: Firefox
+source:
+  license: MPL-2.0
+  repository: https://github.com/mozilla-mobile/firefox-ios
+  version: v159.0.0
+  revision: 4a096fd164e35629ab0814b2f3139e00fc9ee5ec
+build:
+  script: build.sh
+  deploymentTarget: "15.0"

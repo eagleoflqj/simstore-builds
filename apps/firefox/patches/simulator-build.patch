@@ -1,0 +1,52 @@
+diff --git a/firefox-ios/Client.xcodeproj/project.pbxproj b/firefox-ios/Client.xcodeproj/project.pbxproj
+index 2c53ee8..6c93116 100644
+--- a/firefox-ios/Client.xcodeproj/project.pbxproj
++++ b/firefox-ios/Client.xcodeproj/project.pbxproj
+@@ -18679,7 +18679,6 @@
+ 				E6639F191BF11E3A002D0853 /* Conditionally Add Optional Resources */,
+ 				E6B09CD31C74EEDB00C63FA1 /* Copy Frameworks */,
+ 				4368F81027955AE80013419B /* ShellScript */,
+-				C31224262EB9944500683849 /* Strip Symbols */,
+ 			);
+ 			buildRules = (
+ 			);
+@@ -19560,9 +19559,9 @@
+ 			);
+ 			inputPaths = (
+ 				"$(SOURCE_ROOT)/nimbus.fml.yaml",
+-				"$(SOURCE_ROOT)/bin/nimbus-fml.sh",
++				"$(SIMSTORE_RECIPE_DIR)/generate-nimbus.sh",
+ 				"$(SOURCE_ROOT)/bin/nimbus-fml-configuration.sh",
+-				"$(SOURCE_ROOT)/bin/nimbus-fml-configuration.local.sh",
++				"$(SIMSTORE_RECIPE_DIR)/tools.lock",
+ 				"$(SOURCE_ROOT)/../MozillaRustComponents/Package.swift",
+ 			);
+ 			name = "Nimbus Feature Manifest Generator Script";
+@@ -19574,7 +19573,7 @@
+ 			);
+ 			runOnlyForDeploymentPostprocessing = 0;
+ 			shellPath = /bin/sh;
+-			shellScript = "if [ \"$ACTION\" != \"indexbuild\" ]; then\n    /usr/bin/env -i HOME=\"$HOME\" PROJECT=\"$PROJECT\" CONFIGURATION=\"$CONFIGURATION\" SOURCE_ROOT=\"$SOURCE_ROOT\" bash \"$SOURCE_ROOT/bin/nimbus-fml.sh\" --verbose || exit\nfi\n# List the feature manifests as discovered dependencies, so editing one re-runs this phase.\n# Written on every run, index builds included: a missing dependency file fails the phase.\n{\n    printf '%s:' \"$SCRIPT_OUTPUT_FILE_0\" | sed 's/ /\\\\ /g'\n    find \"$SOURCE_ROOT/nimbus-features\" -name '*.yaml' | sort | sed 's/ /\\\\ /g; s/^/ /' | tr -d '\\n'\n    echo\n} > \"$DERIVED_FILE_DIR/nimbus-fml.d\"\n\n";
++			shellScript = "if [ \"$ACTION\" != \"indexbuild\" ]; then\n    bash \"$SIMSTORE_RECIPE_DIR/generate-nimbus.sh\" || exit\nfi\n# List the feature manifests as discovered dependencies, so editing one re-runs this phase.\n# Written on every run, index builds included: a missing dependency file fails the phase.\n{\n    printf '%s:' \"$SCRIPT_OUTPUT_FILE_0\" | sed 's/ /\\\\ /g'\n    find \"$SOURCE_ROOT/nimbus-features\" -name '*.yaml' | sort | sed 's/ /\\\\ /g; s/^/ /' | tr -d '\\n'\n    echo\n} > \"$DERIVED_FILE_DIR/nimbus-fml.d\"\n\n";
+ 		};
+ 		C2A1EA152F4383FE00DD202A /* Run Periphery */ = {
+ 			isa = PBXShellScriptBuildPhase;
+diff --git a/firefox-ios/bin/sdk_generator.sh b/firefox-ios/bin/sdk_generator.sh
+index 7ab6aea..b7f2f47 100755
+--- a/firefox-ios/bin/sdk_generator.sh
++++ b/firefox-ios/bin/sdk_generator.sh
+@@ -173,13 +173,7 @@ if [ -z "$PROJECT" ]; then
+     exit 2
+ fi
+ 
+-VENVDIR="${SOURCE_ROOT}/.venv"
+-
+-[ -x "${VENVDIR}/bin/python" ] || python3 -m venv --clear "${VENVDIR}"
+-# We need at least pip 20.3 for Big Sur support, see https://pip.pypa.io/en/stable/news/#id48
+-# Latest pip is 21.0.1
+-"${VENVDIR}"/bin/pip install "pip>=20.3"
+-"${VENVDIR}"/bin/pip install --upgrade "glean_parser~=$GLEAN_PARSER_VERSION"
++VENVDIR="${SIMSTORE_GLEAN_VENV:?}"
+ 
+ # Run the glinter
+ # Turn its warnings into warnings visible in Xcode (but don't do for the success message)

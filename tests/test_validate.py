@@ -15,6 +15,7 @@ import unittest
 SCRIPTS = Path(__file__).resolve().parents[1] / 'scripts'
 sys.path.insert(0, str(SCRIPTS))
 import validate as validator
+from prepare_app import prepare
 
 
 class BundleTests(unittest.TestCase):
@@ -29,6 +30,7 @@ class BundleTests(unittest.TestCase):
         source.write_text('int main(void) { return 0; }\n')
         for name, target, sdk in (
             ('simulator', 'arm64-apple-ios17.0-simulator', 'iphonesimulator'),
+            ('intel-simulator', 'x86_64-apple-ios17.0-simulator', 'iphonesimulator'),
             ('device', 'arm64-apple-ios17.0', 'iphoneos'),
             ('macos', 'arm64-apple-macos14.0', 'macosx'),
         ):
@@ -62,6 +64,33 @@ class BundleTests(unittest.TestCase):
         self.assertEqual(info['CFBundleIdentifier'], 'org.simstore.fixture')
         self.assertEqual(binaries, [Path('Fixture')])
         self.assertEqual(minimum, (17, 0, 0))
+
+    def make_universal(self, arm64: str = 'simulator') -> None:
+        validator.run('xcrun', 'lipo', '-create', str(self.base / arm64),
+                      str(self.base / 'intel-simulator'), '-output', str(self.app / 'Fixture'))
+
+    def test_prepare_thins_universal_simulator_and_resigns(self) -> None:
+        self.make_universal()
+        prepare(self.app, strip_symbols=True)
+        self.assertEqual(validator.run('xcrun', 'lipo', '-archs', str(self.app / 'Fixture')), 'arm64')
+        validator.validate(self.app)
+        validator.run('codesign', '--verify', '--deep', '--strict', str(self.app))
+
+    def test_prepare_rejects_device_slice_in_universal_bundle(self) -> None:
+        self.make_universal('device')
+        with self.assertRaisesRegex(validator.InvalidBundle, 'IOSSIMULATOR'):
+            prepare(self.app)
+
+    def test_prepare_output_keeps_universal_source_unchanged(self) -> None:
+        self.make_universal()
+        binary = self.app / 'Fixture'
+        original = binary.read_bytes()
+        output = Path(self.work.name) / 'Prepared.app'
+        result = subprocess.run([sys.executable, str(SCRIPTS / 'prepare_app.py'), str(self.app),
+                                 '--output', str(output)], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(binary.read_bytes(), original)
+        validator.validate(output)
 
     def test_validation_without_manifest_needs_only_stdlib(self) -> None:
         result = subprocess.run([sys.executable, '-S', str(SCRIPTS / 'validate.py'), str(self.app)],

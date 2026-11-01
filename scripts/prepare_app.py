@@ -24,12 +24,13 @@ def prepare(app: str | Path, strip_symbols: bool = False) -> None:
             magic = f.read(4)
         if magic not in MACH_MAGICS:
             continue
-        if run('xcrun', 'lipo', '-archs', str(path)).split() != ['arm64']:
+        architectures = set(run('xcrun', 'lipo', '-archs', str(path)).split())
+        if 'arm64' not in architectures or architectures - {'arm64', 'x86_64'}:
             raise ValueError(f'Unexpected architecture(s): {path}')
         if magic == bytes.fromhex('cffaedfe'):
             continue
-        # Flutter's lipo -extract arm64 keeps a fat header with just one slice.
-        # Use -thin only after verifying there are no other architectures.
+        # Prebuilt Simulator frameworks may include Intel slices. Flutter's
+        # lipo -extract arm64 can also leave a fat header with just one slice.
         mode = stat.S_IMODE(path.stat().st_mode)
         fd, temporary = tempfile.mkstemp(prefix='.thin-', dir=path.parent)
         os.close(fd)
@@ -77,7 +78,8 @@ if __name__ == '__main__':
         target = args.output.resolve()
         if target.suffix != '.app' or target.exists() or target.is_relative_to(source):
             parser.error('--output must be a new .app outside the input bundle')
-        validate(source)
+        if source.suffix != '.app' or not source.is_dir():
+            parser.error('Expected an existing .app directory')
         target.parent.mkdir(parents=True, exist_ok=True)
         run('ditto', str(source), str(target))
         app = target
