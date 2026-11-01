@@ -1,0 +1,9 @@
+id: bitwarden
+name: Bitwarden
+source:
+  repository: https://github.com/bitwarden/ios
+  version: v2026.10.1
+  revision: 779a17564dd4279568d7e9258d261209a8192894
+build:
+  script: build.sh
+  deploymentTarget: "15.0"

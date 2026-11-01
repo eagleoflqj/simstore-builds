@@ -51,7 +51,6 @@ def smoke_test(app: Path, manifest_path: Path | None = None, target: str | None 
     info, _, minimum = validate(app)
     if manifest_path:
         minimum = version(check_manifest(manifest_path, info, minimum))
-    booted = True
     udid = target
     if udid is None:
         simulators: Simulators = json.loads(subprocess.check_output(
@@ -60,18 +59,14 @@ def smoke_test(app: Path, manifest_path: Path | None = None, target: str | None 
         print(f'Selected iOS Simulator: {udid}', flush=True)
         if not booted:
             subprocess.run(['xcrun', 'simctl', 'boot', udid], check=True, timeout=180)
-    try:
-        if target is None:
-            subprocess.run(['xcrun', 'simctl', 'bootstatus', udid, '-b'], check=True, timeout=300)
-        print(f'Installing {info["CFBundleIdentifier"]} on {udid}', flush=True)
-        subprocess.run(['xcrun', 'simctl', 'install', udid, str(app)], check=True, timeout=300)
-        print(f'Launching {info["CFBundleIdentifier"]} on {udid}', flush=True)
-        subprocess.run(['xcrun', 'simctl', 'launch', '--terminate-running-process', udid, info['CFBundleIdentifier']],
-                       check=True, timeout=180)
-        print('Install and launch commands succeeded; inspect UI and logs for runtime/plugin issues.', flush=True)
-    finally:
-        if not booted:
-            subprocess.run(['xcrun', 'simctl', 'shutdown', udid], check=False, timeout=60)
+    if target is None:
+        subprocess.run(['xcrun', 'simctl', 'bootstatus', udid, '-b'], check=True, timeout=300)
+    print(f'Installing {info["CFBundleIdentifier"]} on {udid}', flush=True)
+    subprocess.run(['xcrun', 'simctl', 'install', udid, str(app)], check=True, timeout=300)
+    print(f'Launching {info["CFBundleIdentifier"]} on {udid}', flush=True)
+    subprocess.run(['xcrun', 'simctl', 'launch', '--terminate-running-process', udid, info['CFBundleIdentifier']],
+                   check=True, timeout=180)
+    print('Install and launch commands succeeded; inspect UI and logs for runtime/plugin issues.', flush=True)
 
 
 def main() -> int:

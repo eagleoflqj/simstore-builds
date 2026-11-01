@@ -63,7 +63,7 @@ class SimulatorTests(unittest.TestCase):
                     smoke_test(app, Path(temporary) / 'manifest.yaml')
                 run.assert_not_called()
 
-    def test_failed_launch_shuts_down_device_booted_by_the_test(self) -> None:
+    def test_failed_launch_propagates(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             app = Path(temporary) / 'Example.app'
             app.mkdir()
@@ -71,11 +71,9 @@ class SimulatorTests(unittest.TestCase):
                  patch('simulator.subprocess.check_output', return_value=json.dumps(self.simulators)), \
                  patch('simulator.subprocess.run') as run:
                 run.side_effect = [subprocess.CompletedProcess([], 0), subprocess.CompletedProcess([], 0),
-                                   subprocess.CompletedProcess([], 0), subprocess.CalledProcessError(1, 'simctl launch'),
-                                   subprocess.CompletedProcess([], 0)]
+                                   subprocess.CompletedProcess([], 0), subprocess.CalledProcessError(1, 'simctl launch')]
                 with self.assertRaises(subprocess.CalledProcessError):
                     smoke_test(app)
-                self.assertEqual(run.call_args_list[-1].args[0], ['xcrun', 'simctl', 'shutdown', 'new'])
 
 
 if __name__ == '__main__':
