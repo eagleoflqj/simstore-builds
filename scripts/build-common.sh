@@ -38,7 +38,7 @@ start_build() {
   strip_symbols=$(manifest_field build.stripSymbols)
   simulator_settings=(
     -sdk iphonesimulator -destination 'generic/platform=iOS Simulator'
-    -derivedDataPath "$work/derived-data" ARCHS=arm64 ONLY_ACTIVE_ARCH=YES
+    ARCHS=arm64 ONLY_ACTIVE_ARCH=YES
     SUPPORTED_PLATFORMS=iphonesimulator IPHONEOS_DEPLOYMENT_TARGET="$deployment_target"
     CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=
     COMPILER_INDEX_STORE_ENABLE=NO
@@ -60,6 +60,29 @@ checkout() {
     echo "Unexpected revision at $dest; use a separate clean checkout." >&2
     exit 1
   }
+}
+
+checkout_clean() {
+  checkout "$@"
+  local dest=$3
+  [[ -z $(git -C "$dest" status --porcelain --untracked-files=normal) ]] || {
+    echo "Modified checkout at $dest; refusing to overwrite it." >&2
+    exit 1
+  }
+}
+
+checkout_patched() {
+  local url=$1 revision=$2 dest=$3 patch=$4
+  checkout "$url" "$revision" "$dest"
+  if git -C "$dest" diff --quiet; then
+    git -C "$dest" apply "$patch"
+  else
+    git -C "$dest" diff > "$work/source.patch"
+    cmp "$patch" "$work/source.patch" || {
+      echo "Source checkout at $dest has unexpected changes; refusing to overwrite them." >&2
+      exit 1
+    }
+  fi
 }
 
 finish_build() (
