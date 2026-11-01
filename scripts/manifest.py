@@ -22,6 +22,7 @@ class Source(TypedDict):
     repository: str
     version: str
     revision: str
+    license: str
 
 
 class Build(TypedDict):
@@ -110,7 +111,9 @@ def load_manifest(path: str | Path) -> Manifest:
         raise ManifestError('id must match the application directory')
     string(data['name'], 'name')
 
-    source = mapping(data['source'], ('repository', 'version', 'revision'), 'source')
+    source = mapping(data['source'], ('repository', 'version', 'revision', 'license'), 'source')
+    if not isinstance(source['license'], str) or not source['license'].strip():
+        raise ManifestError('source.license must be a nonempty string')
     repository = string(source['repository'], 'source.repository')
     try:
         url = urlsplit(repository)

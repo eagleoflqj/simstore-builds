@@ -15,7 +15,7 @@ def fragment(app_id: str = 'example', version: str = '1.2.3', name: str = 'Examp
     return {'schemaVersion': 1, 'apps': [{
         'id': app_id, 'name': name, 'bundleID': f'org.simstore.{app_id}', 'versions': [{
             'version': version, 'minSimulatorOS': '16.0', 'sha256': 'c' * 64, 'size': 123,
-            'source': {'repository': 'https://example.com/app', 'revision': 'a' * 40},
+            'source': {'repository': 'https://example.com/app', 'revision': 'a' * 40, 'license': 'MIT'},
             'recipeRevision': 'b' * 40,
         }],
     }]}
@@ -91,6 +91,26 @@ class CatalogTests(unittest.TestCase):
         data['apps'][0]['versions'][0]['source']['revision'] = 'main'
         with self.assertRaises(CatalogError):
             validate_index(data)
+
+    def test_source_license_is_required_and_nonempty(self) -> None:
+        value: object
+        for value in (None, '', '  ', 1, False, [], {}):
+            with self.subTest(value=value):
+                data = json.loads(json.dumps(fragment()))
+                data['apps'][0]['versions'][0]['source']['license'] = value
+                with self.assertRaisesRegex(CatalogError, 'source.license'):
+                    validate_index(data)
+        data = json.loads(json.dumps(fragment()))
+        del data['apps'][0]['versions'][0]['source']['license']
+        with self.assertRaisesRegex(CatalogError, 'source.license'):
+            validate_index(data)
+
+    def test_source_license_is_preserved_without_spdx_validation(self) -> None:
+        for value in ('MIT OR Apache-2.0', 'Project custom license', '  custom license\n'):
+            with self.subTest(value=value):
+                data = fragment()
+                data['apps'][0]['versions'][0]['source']['license'] = value
+                self.assertEqual(validate_index(data), data)
 
 
 if __name__ == '__main__':

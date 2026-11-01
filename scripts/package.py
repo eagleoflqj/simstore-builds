@@ -49,7 +49,8 @@ def package(manifest_path: Path, app: Path, output: Path, recipe_revision: str) 
         'minSimulatorOS': minimum,
         'sha256': sha256(archive),
         'size': archive.stat().st_size,
-        'source': {'repository': manifest['source']['repository'], 'revision': manifest['source']['revision']},
+        'source': {'repository': manifest['source']['repository'], 'revision': manifest['source']['revision'],
+                   'license': manifest['source']['license']},
         'recipeRevision': recipe_revision,
     }
     index: Index = {

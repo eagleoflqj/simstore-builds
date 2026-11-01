@@ -2,6 +2,7 @@ id: localsend
 name: LocalSend
 
 source:
+  license: Apache-2.0
   repository: https://github.com/localsend/localsend
   version: v1.18.2
   revision: af0416be50770a97760f7070684bc667b759a15c

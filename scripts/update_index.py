@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import json
 from pathlib import Path
@@ -13,7 +14,7 @@ import tempfile
 from typing import TypedDict, cast
 from uuid import uuid4
 
-from catalog import CatalogError, Index, merge_indexes, validate_index
+from catalog import CatalogError, Index, mapping, merge_indexes, validate_index
 
 
 class Asset(TypedDict):
@@ -66,6 +67,30 @@ def verify_asset(asset: Asset, size: int, digest: str) -> None:
         raise CatalogError(f'{asset["name"]}: SHA-256 mismatch')
 
 
+def parse_release_index(value: object, app_id: str, version: str) -> Index:
+    data = copy.deepcopy(mapping(value, 'index'))
+    apps = data.get('apps')
+    if not isinstance(apps, list) or len(apps) != 1:
+        raise CatalogError(f'{app_id}/{version}: expected exactly one app and one version')
+    app = mapping(apps[0], 'app')
+    versions = app.get('versions')
+    if not isinstance(versions, list) or len(versions) != 1:
+        raise CatalogError(f'{app_id}/{version}: expected exactly one app and one version')
+    record = mapping(versions[0], 'version')
+    if app.get('id') != app_id or record.get('version') != version:
+        raise CatalogError(f'{app_id}/{version}: index identity does not match the release tag')
+    source = mapping(record.get('source'), 'source')
+    if 'license' not in source:
+        # Published fragments predating source.license inherit the recipe's display license.
+        from manifest import load_manifest
+
+        manifest = load_manifest(Path(__file__).resolve().parents[1] / 'apps' / app_id / 'manifest.yaml')
+        if source.get('repository') != manifest['source']['repository']:
+            raise CatalogError(f'{app_id}: source repository differs from recipe; cannot supply its license')
+        source['license'] = manifest['source']['license']
+    return validate_index(data)
+
+
 def collect_index(releases: list[Release]) -> Index:
     fragments: list[Index] = []
     for release in releases:
@@ -81,14 +106,10 @@ def collect_index(releases: list[Release]) -> Index:
         if metadata is None or metadata['state'] != 'uploaded' or archive is None:
             raise CatalogError(f'{tag}: missing index.json or app archive')
         print(f'Reading {tag}', flush=True)
-        fragment = validate_index(api_json(f'repos/{{owner}}/{{repo}}/releases/assets/{metadata["id"]}',
-                                          '-H', 'Accept: application/octet-stream'))
-        if len(fragment['apps']) != 1 or len(fragment['apps'][0]['versions']) != 1:
-            raise CatalogError(f'{tag}: expected exactly one app and one version')
+        fragment = parse_release_index(api_json(f'repos/{{owner}}/{{repo}}/releases/assets/{metadata["id"]}',
+                                               '-H', 'Accept: application/octet-stream'), app_id, version)
         app = fragment['apps'][0]
         record = app['versions'][0]
-        if app['id'] != app_id or record['version'] != version:
-            raise CatalogError(f'{tag}: index identity does not match the release tag')
         verify_asset(archive, record['size'], record['sha256'])
         fragments.append(fragment)
     return merge_indexes(fragments)

@@ -155,7 +155,7 @@ fi
         path = directory / 'manifest.yaml'
         data: dict[str, Any] = dict(
             id='example', name='Example',
-            source=dict(repository='https://example.com/apps/example', version='v1.0.0', revision='a' * 40),
+            source=dict(repository='https://example.com/apps/example', version='v1.0.0', revision='a' * 40, license='MIT'),
             build=dict(script='build.sh', deploymentTarget=deployment))
         if minimum is not None:
             data['compatibility'] = dict(minSimulatorOS=minimum)

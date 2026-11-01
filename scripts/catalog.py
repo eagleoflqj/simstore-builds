@@ -8,6 +8,7 @@ from typing import TypedDict, cast
 class Source(TypedDict):
     repository: str
     revision: str
+    license: str
 
 
 class AppVersion(TypedDict):
@@ -89,6 +90,9 @@ def validate_index(value: object) -> Index:
             if not isinstance(size, int) or isinstance(size, bool) or size <= 0:
                 raise CatalogError('Archive size must be a positive integer')
             source = mapping(record.get('source'), 'source')
+            license_name = source.get('license')
+            if not isinstance(license_name, str) or not license_name.strip():
+                raise CatalogError('source.license must be a nonempty string')
             repository = string(source.get('repository'), 'source.repository')
             if not repository.startswith('https://') or re.search(r'\s', repository):
                 raise CatalogError('Expected an HTTPS source repository')
@@ -97,7 +101,7 @@ def validate_index(value: object) -> Index:
             if not re.fullmatch(r'[0-9a-f]{40}', revision) or not re.fullmatch(r'[0-9a-f]{40}', recipe):
                 raise CatalogError('Expected full source and recipe Git commits')
             versions.append({'version': release_version, 'minSimulatorOS': minimum, 'sha256': digest,
-                             'size': size, 'source': {'repository': repository, 'revision': revision},
+                             'size': size, 'source': {'repository': repository, 'revision': revision, 'license': license_name},
                              'recipeRevision': recipe})
         apps.append({'id': app_id, 'name': name, 'bundleID': bundle, 'versions': versions})
     return {'schemaVersion': 1, 'apps': apps}

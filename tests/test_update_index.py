@@ -21,11 +21,35 @@ from test_catalog import fragment
 def release(tag: str = 'example/1.2.3') -> updater.Release:
     return {'id': 1, 'tag_name': tag, 'draft': False, 'prerelease': False, 'immutable': False,
             'assets': [{'id': 10, 'name': 'index.json', 'state': 'uploaded', 'size': 456, 'digest': None},
-                       {'id': 11, 'name': 'example.app.tar.bz2', 'state': 'uploaded', 'size': 123,
+                       {'id': 11, 'name': f'{tag.split("/")[0]}.app.tar.bz2', 'state': 'uploaded', 'size': 123,
                         'digest': 'sha256:' + 'c' * 64}]}
 
 
 class CollectionTests(unittest.TestCase):
+    def test_old_fragments_receive_the_recipe_license_without_mutating_input(self) -> None:
+        legacy = json.loads(json.dumps(fragment('localsend')))
+        legacy['apps'][0]['versions'][0]['source']['repository'] = 'https://github.com/localsend/localsend'
+        del legacy['apps'][0]['versions'][0]['source']['license']
+        original = copy.deepcopy(legacy)
+        with patch.object(updater, 'api_json', return_value=legacy):
+            result = updater.collect_index([release('localsend/1.2.3')])
+        self.assertEqual(result['apps'][0]['versions'][0]['source']['license'], 'Apache-2.0')
+        self.assertEqual(legacy, original)
+
+    def test_old_fragment_repository_must_match_before_supplying_a_license(self) -> None:
+        legacy = json.loads(json.dumps(fragment('localsend')))
+        del legacy['apps'][0]['versions'][0]['source']['license']
+        with patch.object(updater, 'api_json', return_value=legacy):
+            with self.assertRaisesRegex(CatalogError, 'repository differs'):
+                updater.collect_index([release('localsend/1.2.3')])
+
+    def test_present_but_empty_license_is_rejected_instead_of_filled_in(self) -> None:
+        invalid = fragment()
+        invalid['apps'][0]['versions'][0]['source']['license'] = ''
+        with patch.object(updater, 'api_json', return_value=invalid):
+            with self.assertRaisesRegex(CatalogError, 'source.license'):
+                updater.collect_index([release()])
+
     def test_pagination_keeps_releases_beyond_first_page(self) -> None:
         releases = [release(f'example/1.0.{patch_number}') for patch_number in range(101)]
         with patch.object(updater, 'gh', return_value=json.dumps([releases[:100], releases[100:]])) as gh:

@@ -26,7 +26,7 @@ class BuildTests(unittest.TestCase):
         self.manifest = self.directory / 'manifest.yaml'
         self.manifest.write_text(json.dumps({
             'id': 'example', 'name': 'Example',
-            'source': {'repository': 'https://example.com/app', 'version': 'v1.2.3', 'revision': 'a' * 40},
+            'source': {'repository': 'https://example.com/app', 'version': 'v1.2.3', 'revision': 'a' * 40, 'license': 'MIT'},
             'build': {'script': 'compile.py', 'deploymentTarget': '17.0'},
         }))
         for args in (('init', '--initial-branch=main'), ('config', 'user.name', 'Test'),

@@ -22,7 +22,7 @@ class ManifestTests(unittest.TestCase):
         self.path = self.directory / 'manifest.yaml'
         self.data: dict[str, Any] = dict(
             id='example', name='Example',
-            source=dict(repository='https://example.com/apps/example', version='v1.2.3', revision='a' * 40),
+            source=dict(repository='https://example.com/apps/example', version='v1.2.3', revision='a' * 40, license='MIT'),
             build=dict(script='build.sh', deploymentTarget='16.0'))
 
     def tearDown(self) -> None:
@@ -115,6 +115,25 @@ class ManifestTests(unittest.TestCase):
     def test_release_version_required(self) -> None:
         del self.data['source']['version']
         self.assert_rejected('source.version is required')
+
+    def test_license_is_required(self) -> None:
+        del self.data['source']['license']
+        self.assert_rejected('source.license is required')
+
+    def test_license_rejects_empty_or_non_string_values(self) -> None:
+        value: object
+        for value in (None, '', '  ', 1, False, [], {}):
+            with self.subTest(value=value):
+                self.data['source']['license'] = value
+                self.assert_rejected('source.license must be a nonempty string')
+
+    def test_license_is_not_checked_against_spdx(self) -> None:
+        for value in ('MIT', 'MIT OR Apache-2.0', 'Project custom license', '  custom license\n'):
+            with self.subTest(value=value):
+                self.data['source']['license'] = value
+                result = self.read()
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(json.loads(result.stdout)['source']['license'], value)
 
     def test_nonstandard_release_version_rejected(self) -> None:
         for value in ('v1.2.3-rc1', 'release-1.2.3', '1.2', 'v01.2.3', '1.02.3', '1.2.03'):
