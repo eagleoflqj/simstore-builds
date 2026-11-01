@@ -49,13 +49,13 @@ def package(manifest_path: Path, app: Path, output: Path, recipe_revision: str) 
         'minSimulatorOS': minimum,
         'sha256': sha256(archive),
         'size': archive.stat().st_size,
-        'source': {'repository': manifest['source']['repository'], 'revision': manifest['source']['revision'],
-                   'license': manifest['source']['license']},
+        'revision': manifest['source']['revision'],
         'recipeRevision': recipe_revision,
     }
     index: Index = {
         'schemaVersion': 1,
         'apps': [{'id': manifest['id'], 'name': manifest['name'], 'bundleID': info['CFBundleIdentifier'],
+                  'repository': manifest['source']['repository'], 'license': manifest['source']['license'],
                   'versions': [record]}],
     }
     (output / 'index.json').write_text(json.dumps(index, indent=2) + '\n')

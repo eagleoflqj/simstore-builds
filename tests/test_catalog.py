@@ -13,9 +13,10 @@ from catalog import CatalogError, Index, merge_indexes, validate_index
 
 def fragment(app_id: str = 'example', version: str = '1.2.3', name: str = 'Example') -> Index:
     return {'schemaVersion': 1, 'apps': [{
-        'id': app_id, 'name': name, 'bundleID': f'org.simstore.{app_id}', 'versions': [{
+        'id': app_id, 'name': name, 'bundleID': f'org.simstore.{app_id}',
+        'repository': 'https://example.com/app', 'license': 'MIT', 'versions': [{
             'version': version, 'minSimulatorOS': '16.0', 'sha256': 'c' * 64, 'size': 123,
-            'source': {'repository': 'https://example.com/app', 'revision': 'a' * 40, 'license': 'MIT'},
+            'revision': 'a' * 40,
             'recipeRevision': 'b' * 40,
         }],
     }]}
@@ -26,10 +27,16 @@ class CatalogTests(unittest.TestCase):
         data = fragment()
         self.assertEqual(validate_index(json.loads(json.dumps(data))), data)
 
-    def test_legacy_extra_fields_are_not_propagated(self) -> None:
-        data = json.loads(json.dumps(fragment()))
-        data['apps'][0]['versions'][0].update(buildNumber='7', downloadURL='https://example.com/old')
-        self.assertEqual(validate_index(data), fragment())
+    def test_unknown_fields_are_rejected(self) -> None:
+        for level in ('index', 'app', 'version'):
+            with self.subTest(level=level):
+                data = json.loads(json.dumps(fragment()))
+                target = data if level == 'index' else data['apps'][0]
+                if level == 'version':
+                    target = target['versions'][0]
+                target['unexpected'] = True
+                with self.assertRaisesRegex(CatalogError, 'unknown fields unexpected'):
+                    validate_index(data)
 
     def test_merge_preserves_history_and_sorts_versions_numerically(self) -> None:
         fragments = [fragment('beta', '1.9.0', 'Old name'), fragment('alpha', '2.0.0'),
@@ -45,6 +52,33 @@ class CatalogTests(unittest.TestCase):
 
     def test_identical_versions_are_deduplicated(self) -> None:
         self.assertEqual(merge_indexes([fragment(), fragment()]), fragment())
+
+    def test_latest_version_supplies_repository_and_license_for_all_history(self) -> None:
+        old, latest = fragment(version='1.9.0'), fragment(version='1.10.0')
+        latest['apps'][0]['repository'] = 'https://example.org/moved-app'
+        latest['apps'][0]['license'] = 'Apache-2.0'
+        original = copy.deepcopy([old, latest])
+        merged = merge_indexes([latest, old])
+        app = merged['apps'][0]
+        self.assertEqual(app['repository'], latest['apps'][0]['repository'])
+        self.assertEqual(app['license'], 'Apache-2.0')
+        self.assertEqual([record['version'] for record in app['versions']], ['1.10.0', '1.9.0'])
+        self.assertTrue(all('source' not in record and 'license' not in record and 'repository' not in record
+                            for record in app['versions']))
+        self.assertEqual(merged, merge_indexes([old, latest]))
+        self.assertEqual(merged, merge_indexes([merged, old]))
+        self.assertEqual(merged, merge_indexes([old, merged]))
+        conflicting_old = copy.deepcopy(old)
+        conflicting_old['apps'][0]['license'] = 'GPL-3.0-only'
+        self.assertEqual(merged, merge_indexes([old, conflicting_old, latest]))
+        self.assertEqual(merged, merge_indexes([latest, conflicting_old, old]))
+        self.assertEqual([old, latest], original)
+
+    def test_conflicting_metadata_for_same_latest_version_fails(self) -> None:
+        first, second = fragment(), fragment()
+        second['apps'][0]['license'] = 'Apache-2.0'
+        with self.assertRaisesRegex(CatalogError, 'conflicting metadata'):
+            merge_indexes([first, second])
 
     def test_conflicting_versions_fail(self) -> None:
         other = fragment()
@@ -81,14 +115,14 @@ class CatalogTests(unittest.TestCase):
                     validate_index(data)
 
     def test_missing_fields_and_invalid_source_fail(self) -> None:
-        for field in ('version', 'minSimulatorOS', 'sha256', 'size', 'source', 'recipeRevision'):
+        for field in ('version', 'minSimulatorOS', 'sha256', 'size', 'revision', 'recipeRevision'):
             with self.subTest(field=field):
                 data = json.loads(json.dumps(fragment()))
                 del data['apps'][0]['versions'][0][field]
                 with self.assertRaises(CatalogError):
                     validate_index(data)
         data = fragment()
-        data['apps'][0]['versions'][0]['source']['revision'] = 'main'
+        data['apps'][0]['versions'][0]['revision'] = 'main'
         with self.assertRaises(CatalogError):
             validate_index(data)
 
@@ -97,19 +131,19 @@ class CatalogTests(unittest.TestCase):
         for value in (None, '', '  ', 1, False, [], {}):
             with self.subTest(value=value):
                 data = json.loads(json.dumps(fragment()))
-                data['apps'][0]['versions'][0]['source']['license'] = value
-                with self.assertRaisesRegex(CatalogError, 'source.license'):
+                data['apps'][0]['license'] = value
+                with self.assertRaisesRegex(CatalogError, 'license'):
                     validate_index(data)
         data = json.loads(json.dumps(fragment()))
-        del data['apps'][0]['versions'][0]['source']['license']
-        with self.assertRaisesRegex(CatalogError, 'source.license'):
+        del data['apps'][0]['license']
+        with self.assertRaisesRegex(CatalogError, 'license'):
             validate_index(data)
 
     def test_source_license_is_preserved_without_spdx_validation(self) -> None:
         for value in ('MIT OR Apache-2.0', 'Project custom license', '  custom license\n'):
             with self.subTest(value=value):
                 data = fragment()
-                data['apps'][0]['versions'][0]['source']['license'] = value
+                data['apps'][0]['license'] = value
                 self.assertEqual(validate_index(data), data)
 
 

@@ -4,8 +4,8 @@ from __future__ import annotations
 import re
 from typing import TypedDict
 
-from schema import (Source, ValidationError, app_id, git_revision, mapping,
-                    os_version, release_version, string, validate_source, version_key)
+from schema import (ValidationError, app_id, git_revision, mapping, nonempty_string,
+                    os_version, release_version, repository, string, version_key)
 
 CatalogError = ValidationError
 
@@ -15,7 +15,7 @@ class AppVersion(TypedDict):
     minSimulatorOS: str
     sha256: str
     size: int
-    source: Source
+    revision: str
     recipeRevision: str
 
 
@@ -23,6 +23,8 @@ class App(TypedDict):
     id: str
     name: str
     bundleID: str
+    repository: str
+    license: str
     versions: list[AppVersion]
 
 
@@ -32,7 +34,7 @@ class Index(TypedDict):
 
 
 def validate_index(value: object) -> Index:
-    data = mapping(value, 'index')
+    data = mapping(value, 'index', ('schemaVersion', 'apps'))
     if type(data.get('schemaVersion')) is not int or data['schemaVersion'] != 1:
         raise CatalogError('Expected schemaVersion 1')
     raw_apps = data.get('apps')
@@ -40,9 +42,11 @@ def validate_index(value: object) -> Index:
         raise CatalogError('index.apps must be an array')
     apps: list[App] = []
     for raw_app in raw_apps:
-        app = mapping(raw_app, 'app')
+        app = mapping(raw_app, 'app', ('id', 'name', 'bundleID', 'repository', 'license', 'versions'))
         identifier = app_id(app.get('id'), 'app.id')
         name = string(app.get('name'), f'{identifier}.name')
+        source_repository = repository(app.get('repository'), f'{identifier}.repository')
+        license_name = nonempty_string(app.get('license'), f'{identifier}.license')
         bundle = string(app.get('bundleID'), f'{identifier}.bundleID')
         if not re.fullmatch(r'[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+', bundle):
             raise CatalogError(f'{identifier}: invalid Bundle ID')
@@ -51,7 +55,8 @@ def validate_index(value: object) -> Index:
             raise CatalogError(f'{identifier}.versions must be a nonempty array')
         versions: list[AppVersion] = []
         for raw_version in raw_versions:
-            record = mapping(raw_version, f'{identifier} version')
+            record = mapping(raw_version, f'{identifier} version',
+                             ('version', 'minSimulatorOS', 'sha256', 'size', 'revision', 'recipeRevision'))
             version = release_version(record.get('version'), 'version')
             minimum = string(record.get('minSimulatorOS'), 'minSimulatorOS')
             os_version(minimum, 'minSimulatorOS')
@@ -61,17 +66,19 @@ def validate_index(value: object) -> Index:
             size = record.get('size')
             if not isinstance(size, int) or isinstance(size, bool) or size <= 0:
                 raise CatalogError('Archive size must be a positive integer')
-            source = validate_source(record.get('source'))
+            revision = git_revision(record.get('revision'), 'revision')
             recipe = git_revision(record.get('recipeRevision'), 'recipeRevision')
             versions.append({'version': version, 'minSimulatorOS': minimum, 'sha256': digest,
-                             'size': size, 'source': source,
+                             'size': size, 'revision': revision,
                              'recipeRevision': recipe})
-        apps.append({'id': identifier, 'name': name, 'bundleID': bundle, 'versions': versions})
+        apps.append({'id': identifier, 'name': name, 'bundleID': bundle,
+                     'repository': source_repository, 'license': license_name, 'versions': versions})
     return {'schemaVersion': 1, 'apps': apps}
 
 
 def merge_indexes(indexes: list[Index]) -> Index:
-    entries: dict[str, dict[str, tuple[str, AppVersion]]] = {}
+    entries: dict[str, dict[str, AppVersion]] = {}
+    metadata: dict[str, tuple[tuple[int, int, int], set[tuple[str, str, str]]]] = {}
     bundles: dict[str, str] = {}
     for index in indexes:
         for app in index['apps']:
@@ -79,16 +86,27 @@ def merge_indexes(indexes: list[Index]) -> Index:
             if app_id in bundles and bundles[app_id] != app['bundleID']:
                 raise CatalogError(f'{app_id}: conflicting Bundle IDs')
             bundles[app_id] = app['bundleID']
+            newest = max(version_key(record['version']) for record in app['versions'])
+            details = (app['name'], app['repository'], app['license'])
+            previous_metadata = metadata.get(app_id)
+            if previous_metadata is None or newest > previous_metadata[0]:
+                metadata[app_id] = (newest, {details})
+            elif newest == previous_metadata[0]:
+                previous_metadata[1].add(details)
             versions = entries.setdefault(app_id, {})
             for record in app['versions']:
-                value = (app['name'], record)
                 previous = versions.get(record['version'])
-                if previous is not None and previous != value:
+                if previous is not None and previous != record:
                     raise CatalogError(f'{app_id}/{record["version"]}: conflicting version records')
-                versions[record['version']] = value
+                versions[record['version']] = record
     apps: list[App] = []
     for app_id, records in sorted(entries.items()):
         ordered = sorted(records, key=version_key, reverse=True)
-        apps.append({'id': app_id, 'name': records[ordered[0]][0], 'bundleID': bundles[app_id],
-                     'versions': [records[release][1] for release in ordered]})
+        candidates = metadata[app_id][1]
+        if len(candidates) != 1:
+            raise CatalogError(f'{app_id}: conflicting metadata for the newest version')
+        name, source_repository, license_name = next(iter(candidates))
+        apps.append({'id': app_id, 'name': name, 'bundleID': bundles[app_id],
+                     'repository': source_repository, 'license': license_name,
+                     'versions': [records[release] for release in ordered]})
     return {'schemaVersion': 1, 'apps': apps}

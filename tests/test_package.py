@@ -84,7 +84,11 @@ class PackageTests(unittest.TestCase):
         self.assertEqual(record['sha256'], hashlib.sha256(archive.read_bytes()).hexdigest())
         self.assertEqual(record['size'], archive.stat().st_size)
         self.assertEqual((record['version'], record['minSimulatorOS']), ('1.2.3', '17.0'))
-        self.assertEqual(record['source'], {'repository': 'https://example.com/app', 'revision': 'a' * 40, 'license': 'MIT'})
+        self.assertEqual((app['repository'], app['license']), ('https://example.com/app', 'MIT'))
+        self.assertEqual(record['revision'], 'a' * 40)
+        self.assertNotIn('source', record)
+        self.assertNotIn('repository', record)
+        self.assertNotIn('license', record)
         self.assertEqual(record['recipeRevision'], 'b' * 40)
         self.assertEqual(sorted(path.name for path in self.output.iterdir()), [archive.name, 'icon.png', 'index.json'])
 

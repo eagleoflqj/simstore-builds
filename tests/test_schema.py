@@ -24,10 +24,13 @@ class SharedFieldTests(unittest.TestCase):
         (self.directory / 'build.sh').write_text('#!/bin/bash\n')
         self.path = self.directory / 'manifest.yaml'
         self.index: dict[str, Any] = json.loads(json.dumps(fragment()))
-        self.record = self.index['apps'][0]['versions'][0]
+        self.app = self.index['apps'][0]
+        self.record = self.app['versions'][0]
+        self.source = {'repository': self.app['repository'], 'license': self.app['license'],
+                       'revision': self.record['revision']}
         self.manifest: dict[str, Any] = {
             'id': 'example', 'name': 'Example',
-            'source': dict(self.record['source'], version='v1.2.3'),
+            'source': dict(self.source, version='v1.2.3'),
             'build': {'script': 'build.sh', 'deploymentTarget': '16.0'},
         }
 
@@ -46,24 +49,28 @@ class SharedFieldTests(unittest.TestCase):
         for field, values in invalid.items():
             for value in values:
                 with self.subTest(field=field, value=value):
-                    self.manifest['source'] = dict(self.record['source'], version='v1.2.3')
+                    self.manifest['source'] = dict(self.source, version='v1.2.3')
                     self.manifest['source'][field] = value
                     self.path.write_text(json.dumps(self.manifest))
                     with self.assertRaisesRegex(ManifestError, f'source.{field}'):
                         load_manifest(self.path)
                     candidate = json.loads(json.dumps(self.index))
-                    candidate['apps'][0]['versions'][0]['source'][field] = value
-                    with self.assertRaisesRegex(CatalogError, f'source.{field}'):
+                    target = candidate['apps'][0]['versions'][0] if field == 'revision' else candidate['apps'][0]
+                    target[field] = value
+                    with self.assertRaisesRegex(CatalogError, field):
                         validate_index(candidate)
 
     def test_valid_source_fields_are_preserved_by_both_readers(self) -> None:
-        self.record['source']['license'] = '  Project custom license\n'
-        self.manifest['source'] = dict(self.record['source'], version='v1.2.3')
+        self.app['license'] = '  Project custom license\n'
+        self.source['license'] = self.app['license']
+        self.manifest['source'] = dict(self.source, version='v1.2.3')
         self.path.write_text(json.dumps(self.manifest))
         source = dict(load_manifest(self.path)['source'])
         del source['version']
-        self.assertEqual(source, validate_index(self.index)['apps'][0]['versions'][0]['source'])
-        self.assertEqual(source, self.record['source'])
+        app = validate_index(self.index)['apps'][0]
+        self.assertEqual(source, {'repository': app['repository'], 'license': app['license'],
+                                  'revision': app['versions'][0]['revision']})
+        self.assertEqual(source, self.source)
 
     def test_catalog_validation_does_not_require_yaml(self) -> None:
         result = subprocess.run(

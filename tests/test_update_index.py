@@ -26,28 +26,11 @@ def release(tag: str = 'example/1.2.3') -> updater.Release:
 
 
 class CollectionTests(unittest.TestCase):
-    def test_old_fragments_receive_the_recipe_license_without_mutating_input(self) -> None:
-        legacy = json.loads(json.dumps(fragment('localsend')))
-        legacy['apps'][0]['versions'][0]['source']['repository'] = 'https://github.com/localsend/localsend'
-        del legacy['apps'][0]['versions'][0]['source']['license']
-        original = copy.deepcopy(legacy)
-        with patch.object(updater, 'api_json', return_value=legacy):
-            result = updater.collect_index([release('localsend/1.2.3')])
-        self.assertEqual(result['apps'][0]['versions'][0]['source']['license'], 'Apache-2.0')
-        self.assertEqual(legacy, original)
-
-    def test_old_fragment_repository_must_match_before_supplying_a_license(self) -> None:
-        legacy = json.loads(json.dumps(fragment('localsend')))
-        del legacy['apps'][0]['versions'][0]['source']['license']
-        with patch.object(updater, 'api_json', return_value=legacy):
-            with self.assertRaisesRegex(CatalogError, 'repository differs'):
-                updater.collect_index([release('localsend/1.2.3')])
-
-    def test_present_but_empty_license_is_rejected_instead_of_filled_in(self) -> None:
+    def test_empty_license_is_rejected(self) -> None:
         invalid = fragment()
-        invalid['apps'][0]['versions'][0]['source']['license'] = ''
+        invalid['apps'][0]['license'] = ''
         with patch.object(updater, 'api_json', return_value=invalid):
-            with self.assertRaisesRegex(CatalogError, 'source.license'):
+            with self.assertRaisesRegex(CatalogError, 'license'):
                 updater.collect_index([release()])
 
     def test_pagination_keeps_releases_beyond_first_page(self) -> None:
@@ -99,7 +82,7 @@ class CollectionTests(unittest.TestCase):
                 with self.assertRaises(CatalogError):
                     updater.collect_index([data])
 
-    def test_legacy_asset_without_api_digest_is_supported(self) -> None:
+    def test_asset_without_api_digest_is_supported(self) -> None:
         data = release()
         data['assets'][1]['digest'] = None
         with patch.object(updater, 'api_json', return_value=fragment()):

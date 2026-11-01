@@ -22,7 +22,6 @@ jobs:
           python-version: '3.15'
       - name: Test catalog tools
         run: |
-          python3 -m pip install -r requirements.txt
           python3 -m unittest discover -s tests -p 'test_catalog.py' -v
           python3 -m unittest discover -s tests -p 'test_update_index.py' -v
       - name: Collect app release indexes
