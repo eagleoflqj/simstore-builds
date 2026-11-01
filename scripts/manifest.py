@@ -6,23 +6,19 @@ import argparse
 from collections.abc import Hashable
 import json
 from pathlib import Path
-import re
 import sys
 from typing import TypedDict, cast
-from urllib.parse import urlsplit
 
 import yaml
 
+from schema import (SOURCE_FIELDS, Source as SourceMetadata, ValidationError,
+                    app_id, mapping, os_version, release_version, string, validate_source)
 
-class ManifestError(ValueError):
-    pass
+ManifestError = ValidationError
 
 
-class Source(TypedDict):
-    repository: str
+class Source(SourceMetadata):
     version: str
-    revision: str
-    license: str
 
 
 class Build(TypedDict):
@@ -67,34 +63,6 @@ class ManifestLoader(yaml.SafeLoader):
         return result
 
 
-def mapping(value: object, required: tuple[str, ...], context: str,
-            optional: tuple[str, ...] = ()) -> dict[str, object]:
-    if not isinstance(value, dict):
-        raise ManifestError(f'{context} must be a mapping')
-    for key in required:
-        if key not in value:
-            raise ManifestError(f'{context}.{key} is required')
-    unknown = value.keys() - set(required) - set(optional)
-    if unknown:
-        raise ManifestError(f"{context}: unknown fields {', '.join(sorted(unknown))}")
-    return cast('dict[str, object]', value)
-
-
-def string(value: object, context: str) -> str:
-    if not isinstance(value, str) or not value.strip() or value != value.strip() or re.search(r'[\r\n\x00]', value):
-        raise ManifestError(f'{context} must be a nonempty string')
-    return value
-
-
-def os_version(value: object, context: str) -> tuple[int, int, int]:
-    value = string(value, context)
-    if not re.fullmatch(r'[1-9]\d*(?:\.\d+){0,2}', value):
-        raise ManifestError(f'{context} must be an OS version string')
-    parts = tuple(map(int, value.split('.')))
-    padded = parts + (0,) * (3 - len(parts))
-    return padded[0], padded[1], padded[2]
-
-
 def load_manifest(path: str | Path) -> Manifest:
     path = Path(path).absolute()
     try:
@@ -103,33 +71,16 @@ def load_manifest(path: str | Path) -> Manifest:
         raise ManifestError(str(e)) from e
     if len(documents) != 1:
         raise ManifestError('Expected exactly one YAML document')
-    data = mapping(documents[0], ('id', 'name', 'source', 'build'), 'manifest', ('compatibility',))
-    app_id = string(data['id'], 'id')
-    if not re.fullmatch(r'[a-z][a-z0-9-]*', app_id):
-        raise ManifestError('id must contain lowercase letters, digits or hyphens')
-    if app_id != path.parent.name:
+    data = mapping(documents[0], 'manifest', ('id', 'name', 'source', 'build'), ('compatibility',))
+    if app_id(data['id'], 'id') != path.parent.name:
         raise ManifestError('id must match the application directory')
     string(data['name'], 'name')
 
-    source = mapping(data['source'], ('repository', 'version', 'revision', 'license'), 'source')
-    if not isinstance(source['license'], str) or not source['license'].strip():
-        raise ManifestError('source.license must be a nonempty string')
-    repository = string(source['repository'], 'source.repository')
-    try:
-        url = urlsplit(repository)
-        valid_repository = url.scheme == 'https' and url.hostname and url.path and '@' not in url.netloc
-    except ValueError:
-        valid_repository = False
-    if not valid_repository or re.search(r'[\s?#]', repository):
-        raise ManifestError('source.repository must be an HTTPS repository URL without credentials/query/fragment')
-    release_version = string(source['version'], 'source.version')
-    if not re.fullmatch(r'v?(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)', release_version):
-        raise ManifestError('source.version must be a stable [v]MAJOR.MINOR.PATCH version without leading zeros')
-    revision = string(source['revision'], 'source.revision')
-    if not re.fullmatch(r'[0-9a-f]{40}', revision):
-        raise ManifestError('source.revision must be a full 40-character lowercase Git commit')
+    source = mapping(data['source'], 'source', SOURCE_FIELDS + ('version',))
+    validate_source(source)
+    release_version(source['version'], 'source.version', allow_v=True)
 
-    build = mapping(data['build'], ('script', 'deploymentTarget'), 'build', ('stripSymbols',))
+    build = mapping(data['build'], 'build', ('script', 'deploymentTarget'), ('stripSymbols',))
     build.setdefault('stripSymbols', True)
     if not isinstance(build['stripSymbols'], bool):
         raise ManifestError('build.stripSymbols must be a boolean')
@@ -143,7 +94,7 @@ def load_manifest(path: str | Path) -> Manifest:
     deployment = os_version(build['deploymentTarget'], 'build.deploymentTarget')
 
     if 'compatibility' in data:
-        compatibility = mapping(data['compatibility'], ('minSimulatorOS',), 'compatibility')
+        compatibility = mapping(data['compatibility'], 'compatibility', ('minSimulatorOS',))
         minimum = os_version(compatibility['minSimulatorOS'], 'compatibility.minSimulatorOS')
         if minimum < deployment:
             raise ManifestError('minSimulatorOS must not be below build.deploymentTarget')

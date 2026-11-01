@@ -14,7 +14,8 @@ import tempfile
 from typing import TypedDict, cast
 from uuid import uuid4
 
-from catalog import CatalogError, Index, mapping, merge_indexes, validate_index
+from catalog import CatalogError, Index, merge_indexes, validate_index
+from schema import mapping
 
 
 class Asset(TypedDict):

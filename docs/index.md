@@ -24,7 +24,8 @@ The main catalog and release fragments use the same structure:
           "size": 123456,
           "source": {
             "repository": "https://github.com/owner/example",
-            "revision": "<full upstream commit>"
+            "revision": "<full upstream commit>",
+            "license": "MIT"
           },
           "recipeRevision": "<full simstore-builds commit>"
         }
@@ -37,6 +38,8 @@ The main catalog and release fragments use the same structure:
 A fragment contains one app and one version. Merge apps by `id` and versions by `version`, preserving other apps and historical versions. Versions contain three numeric components without a `v` prefix; compare their components numerically. `recipeRevision` identifies the recipe commit used for the build.
 
 `minSimulatorOS` is the highest requirement from the built app and its embedded binaries, unless the manifest declares a higher minimum. `sha256` describes the compressed archive and `size` is its size in bytes.
+
+`source` uses the same repository, revision, and license rules as the recipe manifest. `license` is required and contains the upstream repository's primary SPDX identifier for display; validation only requires a nonempty string.
 
 ## Updating the catalog
 
