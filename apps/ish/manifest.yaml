@@ -1,0 +1,10 @@
+id: ish
+name: iSH
+source:
+  license: GPL-3.0-only
+  repository: https://github.com/ish-app/ish
+  version: v1.3.2
+  revision: 216cf98a7cda1d68221add374630ede00aae9cd4
+build:
+  script: build.sh
+  deploymentTarget: "15.0"

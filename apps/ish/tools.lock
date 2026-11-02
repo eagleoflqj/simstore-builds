@@ -1,0 +1,4 @@
+LLVM_VERSION=18.1.8
+LLVM_SHA256=4573b7f25f46d2a9c8882993f091c52f416c83271db6f5b213c93f0bd0346a10
+ROOTFS_URL=https://github.com/ish-app/roots/releases/download/g5739cf3df9f8bd3acb82b59c2397cb3daead19c4/appstore-apk.tar.gz
+ROOTFS_SHA256=2f322cf80fdb4d35063d92524549e9b58a1f3228f2cff6a43283b0264d7215b0
