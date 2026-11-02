@@ -1,0 +1,10 @@
+id: kdeconnect
+name: KDE Connect
+source:
+  license: GPL-3.0-only
+  repository: https://invent.kde.org/network/kdeconnect-ios
+  version: v0.5.7
+  revision: 395eeecc6c0e282ac8b9822ebe33ccd471f7887b
+build:
+  script: build.sh
+  deploymentTarget: "15.0"
