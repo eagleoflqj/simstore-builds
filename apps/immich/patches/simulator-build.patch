@@ -1,0 +1,52 @@
+diff --git a/mobile/ios/Podfile b/mobile/ios/Podfile
+index f697d17..f9034dd 100644
+--- a/mobile/ios/Podfile
++++ b/mobile/ios/Podfile
+@@ -121,6 +121,4 @@ post_install do |installer|
+     end
+     # End of the permission_handler configuration
+   end
+-  system("defaults write com.apple.dt.Xcode IDESkipPackagePluginFingerprintValidatation -bool YES")
+-  system("defaults write com.apple.dt.Xcode IDESkipMacroFingerprintValidation -bool YES")
+ end
+diff --git a/mobile/ios/Podfile.lock b/mobile/ios/Podfile.lock
+index d0b7352..036f000 100644
+--- a/mobile/ios/Podfile.lock
++++ b/mobile/ios/Podfile.lock
+@@ -65,6 +65,6 @@ SPEC CHECKSUMS:
+   share_handler_ios: e2244e990f826b2c8eaa291ac3831569438ba0fb
+   share_handler_ios_models: fc638c9b4330dc7f082586c92aee9dfa0b87b871
+ 
+-PODFILE CHECKSUM: 3c43a700a4bffb4120bf696cad263aefd4bb3c8c
++PODFILE CHECKSUM: 70ba056e40c53442fa1be52896506b3458a357a6
+ 
+ COCOAPODS: 1.16.2
+diff --git a/mobile/ios/Runner/Info.plist b/mobile/ios/Runner/Info.plist
+index 81c02ae..fa4f377 100644
+--- a/mobile/ios/Runner/Info.plist
++++ b/mobile/ios/Runner/Info.plist
+@@ -14,7 +14,7 @@
+     <key>CFBundleDevelopmentRegion</key>
+     <string>$(DEVELOPMENT_LANGUAGE)</string>
+     <key>CFBundleDisplayName</key>
+-    <string>${PRODUCT_NAME}</string>
++    <string>Immich</string>
+     <key>CFBundleDocumentTypes</key>
+     <array>
+       <dict>
+@@ -74,7 +74,7 @@
+       <string>zh</string>
+     </array>
+     <key>CFBundleName</key>
+-    <string>immich_mobile</string>
++    <string>Immich</string>
+     <key>CFBundlePackageType</key>
+     <string>APPL</string>
+     <key>CFBundleShortVersionString</key>
+@@ -203,4 +203,4 @@
+     <key>io.flutter.embedded_views_preview</key>
+     <true />
+   </dict>
+-</plist>
+\ No newline at end of file
++</plist>
