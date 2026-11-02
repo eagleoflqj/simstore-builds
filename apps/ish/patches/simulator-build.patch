@@ -1,0 +1,90 @@
+diff --git a/iSH.xcodeproj/project.pbxproj b/iSH.xcodeproj/project.pbxproj
+index 38e6148..fc4d628 100644
+--- a/iSH.xcodeproj/project.pbxproj
++++ b/iSH.xcodeproj/project.pbxproj
+@@ -1918,7 +1918,7 @@
+ 			);
+ 			runOnlyForDeploymentPostprocessing = 0;
+ 			shellPath = /bin/sh;
+-			shellScript = "curl -L \"https://$ROOTFS_URL\" -o \"$BUILT_PRODUCTS_DIR/$CONTENTS_FOLDER_PATH/root.tar.gz\"\n";
++			shellScript = "cp \"$ISH_ROOTFS_ARCHIVE\" \"$BUILT_PRODUCTS_DIR/$CONTENTS_FOLDER_PATH/root.tar.gz\"\n";
+ 			showEnvVarsInLog = 0;
+ 		};
+ 		BBEF197A268066D1001225BD /* Generate APK Repositories File */ = {
+@@ -1972,7 +1972,7 @@
+ 			);
+ 			runOnlyForDeploymentPostprocessing = 0;
+ 			shellPath = /bin/sh;
+-			shellScript = "curl -L \"https://$ROOTFS_URL\" -o \"$BUILT_PRODUCTS_DIR/$CONTENTS_FOLDER_PATH/root.tar.gz\"\n";
++			shellScript = "cp \"$ISH_ROOTFS_ARCHIVE\" \"$BUILT_PRODUCTS_DIR/$CONTENTS_FOLDER_PATH/root.tar.gz\"\n";
+ 			showEnvVarsInLog = 0;
+ 		};
+ 		BBFB2C572590257E00545EAB /* ShellScript */ = {
+diff --git a/meson_options.txt b/meson_options.txt
+index 6910b8b..e7211e9 100644
+--- a/meson_options.txt
++++ b/meson_options.txt
+@@ -7,5 +7,6 @@ option('kernel', type: 'combo', choices: ['ish', 'linux'], value: 'ish')
+ option('kconfig', type: 'array', value: [])
+ 
+ option('vdso_c_args', type: 'string', value: '')
++option('vdso_cc', type: 'string', value: 'clang')
+ 
+ option('no_crlf', type: 'boolean', value: false)
+diff --git a/vdso/meson.build b/vdso/meson.build
+index 4be7b95..c42ab39 100644
+--- a/vdso/meson.build
++++ b/vdso/meson.build
+@@ -6,7 +6,7 @@
+ # compatible toolchain you can edit this file to point to it instead.)
+ 
+ # Default install paths for Homebrew on Intel, Homebrew on Apple silicon, and MacPorts, respectively.
+-clang = find_program('/usr/local/opt/llvm/bin/clang', '/opt/homebrew/opt/llvm/bin/clang', '/opt/local/bin/clang', 'clang')
++clang = find_program(get_option('vdso_cc'))
+ check_cc = find_program('check-cc.sh')
+ result = run_command(check_cc, clang, check: false)
+ if result.returncode() != 0
+diff --git a/xcode-meson.sh b/xcode-meson.sh
+index d39d318..5adb8d4 100755
+--- a/xcode-meson.sh
++++ b/xcode-meson.sh
+@@ -1,7 +1,6 @@
+ #!/bin/bash
+ 
+-# Try to figure out the user's PATH to pick up their installed utilities.
+-export PATH="$PATH:$(sudo -u "$USER" -i printenv PATH)"
++# Use the toolchain prepared by the calling build recipe.
+ 
+ mkdir -p "$MESON_BUILD_DIR"
+ cd "$MESON_BUILD_DIR"
+@@ -15,6 +14,9 @@ if [[ $? -ne 0 ]]; then
+         arch_args="'-arch', '$arch', $arch_args"
+     done
+     arch_args="${arch_args%%, }"
++    if [[ $PLATFORM_NAME == iphonesimulator ]]; then
++        arch_args="$arch_args, '-target', '$ARCHS-apple-ios$IPHONEOS_DEPLOYMENT_TARGET-simulator', '-isysroot', '$SDKROOT'"
++    fi
+     meson_arch=${ARCHS%% *}
+     case "$meson_arch" in
+         arm64) meson_arch=aarch64 ;;
+@@ -36,7 +38,7 @@ if [[ $? -ne 0 ]]; then
+     [properties]
+     needs_exe_wrapper = true
+ EOF
+-    (set -x; meson $SRCROOT --cross-file $crossfile) || exit $?
++    (set -x; meson setup "$SRCROOT" --cross-file "$crossfile" "-Dvdso_cc=$ISH_VDSO_CC") || exit $?
+     config=$(meson introspect --buildoptions)
+ fi
+ 
+diff --git a/xcode-ninja.sh b/xcode-ninja.sh
+index 5fe3718..c456d3f 100755
+--- a/xcode-ninja.sh
++++ b/xcode-ninja.sh
+@@ -1,6 +1,5 @@
+ #!/bin/sh
+ 
+-# Try to figure out the user's PATH to pick up their installed utilities.
+-export PATH="$PATH:$(sudo -u "$USER" -i printenv PATH)"
++# Use the toolchain prepared by the calling build recipe.
+ 
+ ninja "$@"
