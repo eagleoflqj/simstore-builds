@@ -35,10 +35,7 @@ for line in sys.stdin:
     for value in (os.environ["API_ID"], os.environ["API_HASH"]):
         line = line.replace(value, "[REDACTED]")
     sys.stdout.write(line)
-' > "$work/logs/bazel-build.log" || {
-    tail -n 80 "$work/logs/bazel-build.log"
-    exit 1
-  }
+' | tee "$work/logs/bazel-build.log"
 # Bazel's archive-root directory can retain stale binaries after a cache hit.
 unzip -q "$source_dir/bazel-bin/Telegram/Telegram.ipa" -d "$staging"
 finish_build "$staging/Payload/Telegram.app" Telegram.app
