@@ -1,0 +1,4 @@
+source 'https://rubygems.org'
+
+# Match the version in Element Classic's Podfile.lock.
+gem 'cocoapods', '= 1.16.2'

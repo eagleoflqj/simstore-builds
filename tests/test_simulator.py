@@ -1,6 +1,7 @@
 """Select only available iOS devices compatible with the app's actual minimum."""
 from __future__ import annotations
 
+import io
 import json
 from pathlib import Path
 import subprocess
@@ -10,11 +11,15 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-from simulator import Simulators, select_device, smoke_test
+from simulator import Simulators, main, parse_launch_pid, select_device, smoke_test
 
 
 class SimulatorTests(unittest.TestCase):
     def setUp(self) -> None:
+        work = tempfile.TemporaryDirectory()
+        self.addCleanup(work.cleanup)
+        self.app = Path(work.name) / 'Example.app'
+        self.app.mkdir()
         self.simulators: Simulators = {
             'runtimes': [
                 {'identifier': 'com.apple.CoreSimulator.SimRuntime.iOS-17-0', 'version': '17.0', 'isAvailable': True},
@@ -50,6 +55,52 @@ class SimulatorTests(unittest.TestCase):
     def test_fails_if_no_compatible_ios_device_exists(self) -> None:
         with self.assertRaisesRegex(ValueError, 'No available iOS Simulator'):
             select_device(self.simulators, (28, 0, 0))
+
+    def test_parses_pid_from_main_ci_launch_format(self) -> None:
+        self.assertEqual(parse_launch_pid('org.videolan.vlc-ios: 22551\n', 'org.videolan.vlc-ios'), 22551)
+
+    def test_rejects_missing_invalid_or_ambiguous_launch_pid(self) -> None:
+        for output in ('', 'launched', 'org.simstore.example: 0', 'org.simstore.example: -12',
+                       'org.other.example: 22551', 'org.simstore.example: 22551 extra',
+                       'org.simstore.example: 22551\norg.simstore.example: 22552'):
+            with self.subTest(output=output), self.assertRaises(ValueError):
+                parse_launch_pid(output, 'org.simstore.example')
+
+    def test_startup_check_accepts_a_living_process(self) -> None:
+        with subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)']) as process:
+            try:
+                output = f'org.simstore.example: {process.pid}\n'
+                with patch('simulator.validate', return_value=({'CFBundleIdentifier': 'org.simstore.example'}, [], (17, 0, 0))), \
+                     patch('simulator.subprocess.run', return_value=subprocess.CompletedProcess([], 0, stdout=output)), \
+                     patch('simulator.sleep') as sleep, \
+                     patch('sys.stdout', new_callable=io.StringIO) as stdout:
+                    smoke_test(self.app, target='booted')
+                    sleep.assert_called_once_with(30)
+                    self.assertIn(output.strip(), stdout.getvalue())
+                    self.assertIn(f'PID {process.pid} is still alive after 30 seconds', stdout.getvalue())
+            finally:
+                process.terminate()
+
+    def test_process_exiting_during_startup_fails_the_cli(self) -> None:
+        with subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)']) as process:
+            try:
+                def exit_during_wait(seconds: float) -> None:
+                    process.terminate()
+                    process.wait(timeout=5)
+
+                output = f'org.simstore.example: {process.pid}\n'
+                with patch('simulator.validate', return_value=({'CFBundleIdentifier': 'org.simstore.example'}, [], (17, 0, 0))), \
+                     patch('simulator.subprocess.run', return_value=subprocess.CompletedProcess([], 0, stdout=output)), \
+                     patch('simulator.sleep', side_effect=exit_during_wait) as sleep, \
+                     patch('sys.argv', ['simulator.py', str(self.app), 'booted']), \
+                     patch('sys.stdout', new_callable=io.StringIO), \
+                     patch('sys.stderr', new_callable=io.StringIO) as stderr:
+                    self.assertEqual(main(), 1)
+                    sleep.assert_called_once_with(30)
+                    self.assertIn(f'PID {process.pid}', stderr.getvalue())
+                    self.assertIn('exited before the 30-second startup check', stderr.getvalue())
+            finally:
+                process.terminate()
 
     def test_manifest_minimum_is_honored_before_booting(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

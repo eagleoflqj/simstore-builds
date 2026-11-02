@@ -1,0 +1,10 @@
+id: element-classic
+name: Element Classic
+source:
+  license: AGPL-3.0-or-later
+  repository: https://github.com/element-hq/element-ios
+  version: v1.11.41
+  revision: 5ff606c5151c759ba890b2e72aa2dbef67bf172d
+build:
+  script: build.sh
+  deploymentTarget: "15.1"

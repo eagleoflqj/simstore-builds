@@ -11,11 +11,13 @@ import sys
 import tempfile
 from typing import Any
 import unittest
+from unittest.mock import patch
 
 SCRIPTS = Path(__file__).resolve().parents[1] / 'scripts'
 sys.path.insert(0, str(SCRIPTS))
 import validate as validator
 from prepare_app import prepare
+from simulator import main as simulator_main
 
 
 class BundleTests(unittest.TestCase):
@@ -37,6 +39,10 @@ class BundleTests(unittest.TestCase):
             sdkpath = validator.run('xcrun', '--sdk', sdk, '--show-sdk-path')
             subprocess.run(['xcrun', 'clang', '-target', target, '-isysroot', sdkpath,
                             str(source), '-o', str(cls.base / name)], check=True, capture_output=True)
+        # Current SDKs cannot link i386 apps, but clang can still emit the Mach-O slice.
+        subprocess.run(['xcrun', 'clang', '-target', 'i386-apple-ios10.0-simulator', '-c',
+                        str(source), '-o', str(cls.base / 'legacy-intel-simulator')],
+                       check=True, capture_output=True)
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -65,9 +71,13 @@ class BundleTests(unittest.TestCase):
         self.assertEqual(binaries, [Path('Fixture')])
         self.assertEqual(minimum, (17, 0, 0))
 
-    def make_universal(self, arm64: str = 'simulator') -> None:
-        validator.run('xcrun', 'lipo', '-create', str(self.base / arm64),
-                      str(self.base / 'intel-simulator'), '-output', str(self.app / 'Fixture'))
+    def make_universal(self, arm64: str = 'simulator', legacy_intel: bool = False) -> None:
+        inputs = [self.base / arm64, self.base / 'intel-simulator']
+        if legacy_intel:
+            inputs.append(self.base / 'legacy-intel-simulator')
+        validator.run('xcrun', 'lipo', '-create', *(str(path) for path in inputs),
+                      '-output', str(self.app / 'Fixture'))
+        (self.app / 'Fixture').chmod(0o755)
 
     def test_prepare_thins_universal_simulator_and_resigns(self) -> None:
         self.make_universal()
@@ -77,9 +87,20 @@ class BundleTests(unittest.TestCase):
         validator.run('codesign', '--verify', '--deep', '--strict', str(self.app))
 
     def test_prepare_rejects_device_slice_in_universal_bundle(self) -> None:
-        self.make_universal('device')
-        with self.assertRaisesRegex(validator.InvalidBundle, 'IOSSIMULATOR'):
-            prepare(self.app)
+        for legacy_intel in (False, True):
+            with self.subTest(legacy_intel=legacy_intel):
+                self.make_universal('device', legacy_intel=legacy_intel)
+                with self.assertRaisesRegex(validator.InvalidBundle, 'IOSSIMULATOR'):
+                    prepare(self.app)
+
+    def test_prepare_removes_legacy_intel_simulator_slice(self) -> None:
+        self.make_universal(legacy_intel=True)
+        with self.assertRaises(validator.InvalidBundle):
+            validator.validate(self.app)
+        prepare(self.app, strip_symbols=True)
+        self.assertEqual(validator.run('xcrun', 'lipo', '-archs', str(self.app / 'Fixture')), 'arm64')
+        validator.validate(self.app)
+        validator.run('codesign', '--verify', '--deep', '--strict', str(self.app))
 
     def test_prepare_output_keeps_universal_source_unchanged(self) -> None:
         self.make_universal()
@@ -97,7 +118,7 @@ class BundleTests(unittest.TestCase):
                                 capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_smoke_forwards_booted_and_udid_to_simctl(self) -> None:
+    def test_simulator_cli_forwards_booted_and_udid_to_simctl(self) -> None:
         fake_bin = Path(self.work.name) / 'bin'
         fake_bin.mkdir()
         fake_xcrun = fake_bin / 'xcrun'
@@ -105,6 +126,9 @@ class BundleTests(unittest.TestCase):
 if [[ $1 == simctl ]]; then
   printf '%s\\0' "$@" >> "$SIMSTORE_SMOKE_LOG"
   printf '\\n' >> "$SIMSTORE_SMOKE_LOG"
+  if [[ $2 == launch ]]; then
+    printf 'org.simstore.fixture: %s\\n' "$SIMSTORE_SMOKE_PID"
+  fi
 else
   exec "$SIMSTORE_REAL_XCRUN" "$@"
 fi
@@ -114,13 +138,15 @@ fi
         real_xcrun = shutil.which('xcrun')
         assert real_xcrun is not None
         env = dict(os.environ, PATH=f'{fake_bin}{os.pathsep}{os.environ["PATH"]}',
-                   SIMSTORE_REAL_XCRUN=real_xcrun, SIMSTORE_SMOKE_LOG=str(log))
+                   SIMSTORE_REAL_XCRUN=real_xcrun, SIMSTORE_SMOKE_LOG=str(log), SIMSTORE_SMOKE_PID=str(os.getpid()))
         for target in ('booted', '00000000-0000-0000-0000-000000000001'):
             with self.subTest(target=target):
                 log.unlink(missing_ok=True)
-                result = subprocess.run(['bash', str(SCRIPTS / 'smoke-test.sh'), str(self.app), target],
-                                        env=env, capture_output=True, text=True)
-                self.assertEqual(result.returncode, 0, result.stderr)
+                with patch.dict(os.environ, env), \
+                     patch('sys.argv', ['simulator.py', str(self.app), target]), \
+                     patch('simulator.sleep') as sleep:
+                    self.assertEqual(simulator_main(), 0)
+                    sleep.assert_called_once_with(30)
                 calls = [[arg.decode() for arg in line.rstrip(b'\0').split(b'\0')]
                          for line in log.read_bytes().splitlines()]
                 self.assertEqual(calls, [
