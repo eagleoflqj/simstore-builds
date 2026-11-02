@@ -1,0 +1,141 @@
+diff --git a/ios/App/App/AppDelegate.swift b/ios/App/App/AppDelegate.swift
+index fc8a84a..fad2d78 100644
+--- a/ios/App/App/AppDelegate.swift
++++ b/ios/App/App/AppDelegate.swift
+@@ -33,31 +33,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
+         // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
+     }
+ 
+-    /// Handles a Home Screen quick action (long-press the app icon). The target
+-    /// URL is not mapped here — it is stored declaratively in each shortcut
+-    /// item's `UIApplicationShortcutItemUserInfo` in `Info.plist`, so this just
+-    /// opens it and the whole mapping lives in the shared URL-scheme parser
+-    /// (`src/app/core/app-uri-actions/parse-app-uri-quick-action.ts`).
+-    /// `tools/verify-ios-quick-actions.test.js` binds the two together.
+-    ///
+-    /// Reusing the URL scheme means quick actions ride the app's existing
+-    /// `appUrlOpen` pipeline instead of adding a second native channel.
+-    ///
+-    /// Why nothing is done in `didFinishLaunchingWithOptions`, even though a
+-    /// cold launch puts the item in its `launchOptions`: the proxy below posts
+-    /// `.capacitorOpenURL` synchronously and Foundation does not retain
+-    /// notifications, while the `App` plugin only registers its observer in
+-    /// `load()` — reached from `CapacitorBridge.init` → `registerPlugins()`,
+-    /// i.e. during the root view controller's `loadView()`, which runs *after*
+-    /// `didFinishLaunchingWithOptions` returns. Opening the URL there would
+-    /// post into the void. Letting that method return `true` instead makes iOS
+-    /// call this one once the launch sequence is done, which is past `loadView()`
+-    /// — so warm and cold launches share one path and need no queue. From here
+-    /// Capacitor's own `retainUntilConsumed: true` holds the event until the JS
+-    /// listener in `src/main.ts` registers.
+-    ///
+-    /// If this app ever opts into UIScene (no `UIApplicationSceneManifest`
+-    /// today), this moves to `windowScene(_:performActionFor:)`.
++    /// Handles Home Screen quick actions forwarded by the scene delegate.
++    /// Cold-launch actions wait until the scene has loaded the Capacitor bridge;
++    /// Capacitor then retains the URL event until JavaScript subscribes.
+     func application(_ application: UIApplication,
+                      performActionFor shortcutItem: UIApplicationShortcutItem,
+                      completionHandler: @escaping (Bool) -> Void) {
+@@ -86,3 +64,69 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
+     }
+ 
+ }
++
++@objc(SuperProductivitySceneDelegate)
++class SceneDelegate: UIResponder, UIWindowSceneDelegate {
++    var window: UIWindow?
++    private var pendingConnectionOptions: UIScene.ConnectionOptions?
++
++    private var appDelegate: AppDelegate? {
++        return UIApplication.shared.delegate as? AppDelegate
++    }
++
++    func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
++        appDelegate?.window = window
++        pendingConnectionOptions = connectionOptions
++    }
++
++    func sceneDidBecomeActive(_ scene: UIScene) {
++        appDelegate?.applicationDidBecomeActive(UIApplication.shared)
++        guard let options = pendingConnectionOptions else { return }
++        pendingConnectionOptions = nil
++        window?.rootViewController?.loadViewIfNeeded()
++        self.scene(scene, openURLContexts: options.urlContexts)
++        for activity in options.userActivities {
++            self.scene(scene, continue: activity)
++        }
++        if let shortcut = options.shortcutItem {
++            appDelegate?.application(UIApplication.shared, performActionFor: shortcut, completionHandler: { _ in })
++        }
++    }
++
++    func sceneWillResignActive(_ scene: UIScene) {
++        appDelegate?.applicationWillResignActive(UIApplication.shared)
++    }
++
++    func sceneWillEnterForeground(_ scene: UIScene) {
++        appDelegate?.applicationWillEnterForeground(UIApplication.shared)
++    }
++
++    func sceneDidEnterBackground(_ scene: UIScene) {
++        appDelegate?.applicationDidEnterBackground(UIApplication.shared)
++    }
++
++    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
++        for context in URLContexts {
++            var options: [UIApplication.OpenURLOptionsKey: Any] = [.openInPlace: context.options.openInPlace]
++            if let sourceApplication = context.options.sourceApplication {
++                options[.sourceApplication] = sourceApplication
++            }
++            if let annotation = context.options.annotation {
++                options[.annotation] = annotation
++            }
++            _ = appDelegate?.application(UIApplication.shared, open: context.url, options: options)
++        }
++    }
++
++    func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
++        _ = appDelegate?.application(UIApplication.shared, continue: userActivity, restorationHandler: { _ in })
++    }
++
++    func windowScene(_ windowScene: UIWindowScene, performActionFor shortcutItem: UIApplicationShortcutItem, completionHandler: @escaping (Bool) -> Void) {
++        guard let appDelegate = appDelegate else {
++            completionHandler(false)
++            return
++        }
++        appDelegate.application(UIApplication.shared, performActionFor: shortcutItem, completionHandler: completionHandler)
++    }
++}
+diff --git a/ios/App/App/Info.plist b/ios/App/App/Info.plist
+index cad30e3..ffd4f78 100644
+--- a/ios/App/App/Info.plist
++++ b/ios/App/App/Info.plist
+@@ -26,8 +26,25 @@
+ 	<true/>
+ 	<key>UILaunchStoryboardName</key>
+ 	<string>LaunchScreen</string>
+-	<key>UIMainStoryboardFile</key>
+-	<string>Main</string>
++	<key>UIApplicationSceneManifest</key>
++	<dict>
++		<key>UIApplicationSupportsMultipleScenes</key>
++		<false/>
++		<key>UISceneConfigurations</key>
++		<dict>
++			<key>UIWindowSceneSessionRoleApplication</key>
++			<array>
++				<dict>
++					<key>UISceneConfigurationName</key>
++					<string>Default Configuration</string>
++					<key>UISceneDelegateClassName</key>
++					<string>SuperProductivitySceneDelegate</string>
++					<key>UISceneStoryboardFile</key>
++					<string>Main</string>
++				</dict>
++			</array>
++		</dict>
++	</dict>
+ 	<key>UIRequiredDeviceCapabilities</key>
+ 	<array>
+ 		<string>armv7</string>

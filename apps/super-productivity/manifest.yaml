@@ -1,0 +1,10 @@
+id: super-productivity
+name: Super Productivity
+source:
+  license: MIT
+  repository: https://github.com/super-productivity/super-productivity
+  version: v19.3.1
+  revision: 1014df989d55497d6ec18b038de09aa25b6cd2bb
+build:
+  script: build.sh
+  deploymentTarget: "16.0"
