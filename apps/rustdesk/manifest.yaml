@@ -1,0 +1,10 @@
+id: rustdesk
+name: RustDesk
+source:
+  license: AGPL-3.0-only
+  repository: https://github.com/rustdesk/rustdesk
+  version: v1.5.1
+  revision: 23e5bb471a040d62f0a6ad52591fb30784265b73
+build:
+  script: build.sh
+  deploymentTarget: "15.0"

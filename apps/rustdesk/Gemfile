@@ -1,0 +1,4 @@
+source 'https://rubygems.org'
+
+# Match the version recorded in the stable release's iOS Podfile.lock.
+gem 'cocoapods', '= 1.15.2'

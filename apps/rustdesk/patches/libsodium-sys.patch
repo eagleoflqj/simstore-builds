@@ -1,0 +1,14 @@
+--- a/build.rs
++++ b/build.rs
+@@ -180,6 +180,11 @@
+ 
+         // Roughly based on `dist-build/ios.sh` in the libsodium sources
+         match &*target {
++            "aarch64-apple-ios-sim" => {
++                let minimum = env::var("IPHONEOS_DEPLOYMENT_TARGET").unwrap_or_else(|_| "15.0".into());
++                cflags += &format!(" -isysroot {} -mios-simulator-version-min={}", sdk_dir_simulator, minimum);
++                host_arg = "--host=aarch64-apple-ios".to_string();
++            }
+             "aarch64-apple-ios" => {
+                 cflags += " -arch arm64";
+                 cflags += &format!(" -isysroot {}", sdk_dir_ios);
