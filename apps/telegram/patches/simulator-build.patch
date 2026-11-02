@@ -1,0 +1,26 @@
+diff --git a/build-system/Make/Make.py b/build-system/Make/Make.py
+index 4c3a6419..0714c6bf 100644
+--- a/build-system/Make/Make.py
++++ b/build-system/Make/Make.py
+@@ -319,6 +319,8 @@ class BazelCommandLine:
+             ]
+ 
+         combined_arguments += self.configuration_args
++        if self.additional_args is not None:
++            combined_arguments += self.additional_args
+         if self.profile_swift:
+             combined_arguments += ['--config=swift_profile']
+ 
+@@ -623,6 +625,12 @@ def build(bazel, arguments):
+     elif arguments.cacheHost is not None:
+         bazel_command_line.add_remote_cache(arguments.cacheHost)
+ 
++    if arguments.bazelArguments is not None:
++        bazel_command_line.add_additional_args(shlex.split(arguments.bazelArguments))
++
++    if arguments.configuration in ('debug_sim_arm64', 'release_sim_arm64'):
++        bazel_command_line.set_disable_provisioning_profiles()
++
+     resolve_configuration(
+         base_path=os.getcwd(),
+         bazel_command_line=bazel_command_line,

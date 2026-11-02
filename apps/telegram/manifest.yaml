@@ -1,0 +1,10 @@
+id: telegram
+name: Telegram
+source:
+  license: GPL-2.0-or-later
+  repository: https://github.com/TelegramMessenger/Telegram-iOS
+  version: v13.1.2
+  revision: 279f89e4d4f63f17227bf877dc3d8990f22ecd58
+build:
+  script: build.sh
+  deploymentTarget: "15.0"
