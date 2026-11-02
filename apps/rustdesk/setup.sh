@@ -26,8 +26,9 @@ if [[ ! -d "$work/libsodium-sys" ]]; then
   mkdir "$work/libsodium-sys"
   tar -xzf "$archive" -C "$work/libsodium-sys" --strip-components=1
 fi
-if ! patch --dry-run --reverse --silent -p1 -d "$work/libsodium-sys" < "$app_dir/patches/libsodium-sys.patch" > /dev/null 2>&1; then
-  patch -p1 -d "$work/libsodium-sys" < "$app_dir/patches/libsodium-sys.patch"
+# BSD patch otherwise retries a failed reverse check in the forward direction.
+if ! patch --force --dry-run --reverse --silent -p1 -d "$work/libsodium-sys" < "$app_dir/patches/libsodium-sys.patch" > /dev/null 2>&1; then
+  patch --force -p1 -d "$work/libsodium-sys" < "$app_dir/patches/libsodium-sys.patch"
 fi
 checkout_flutter "$app_dir/patches/flutter.patch"
 checkout_clean https://github.com/microsoft/vcpkg "$VCPKG_REVISION" "$VCPKG_ROOT"
