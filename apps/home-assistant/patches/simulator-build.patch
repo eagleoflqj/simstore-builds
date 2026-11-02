@@ -1,0 +1,40 @@
+diff --git a/HomeAssistant.xcodeproj/project.pbxproj b/HomeAssistant.xcodeproj/project.pbxproj
+index 5fcd66b..cdfab01 100644
+--- a/HomeAssistant.xcodeproj/project.pbxproj
++++ b/HomeAssistant.xcodeproj/project.pbxproj
+@@ -3568,7 +3568,6 @@
+ 				42886D1E2FFE61FB004EB33B /* ShellScript */,
+ 				B657A8E41CA646EB00121384 /* Resources */,
+ 				B6AAD7AC1D827DD40090B220 /* Embed Foundation Extensions */,
+-				B6CC5DA62159D10F00833E5D /* Embed Watch Content */,
+ 				11DE9FBD25B6184E0081C0ED /* Embed Mac Launcher */,
+ 				9C08D123229F187E001B4F73 /* Enable Special Entitlements */,
+ 				110EC9FF251708D5009C9A1B /* Embed Frameworks */,
+@@ -3583,7 +3582,6 @@
+ 				B6AAD7A71D827DD40090B220 /* PBXTargetDependency */,
+ 				1155DD0F250F4101003405C0 /* PBXTargetDependency */,
+ 				1171507524DFCDEE0065E874 /* PBXTargetDependency */,
+-				B6CC5D9D2159D10F00833E5D /* PBXTargetDependency */,
+ 				11DE9F9825B6173D0081C0ED /* PBXTargetDependency */,
+ 				11B92912266F145000786588 /* PBXTargetDependency */,
+ 				11B6B5812948F8E100B8B552 /* PBXTargetDependency */,
+diff --git a/Tools/build_tool b/Tools/build_tool
+index 00f715e..615e539 100755
+--- a/Tools/build_tool
++++ b/Tools/build_tool
+@@ -19,6 +19,7 @@ export CLANG_MODULE_CACHE_PATH="${CLANG_MODULE_CACHE_PATH:-$root_dir/.build/modu
+ 
+ swift_package_resolve() {
+   swift package \
++    --disable-keychain \
+     --disable-sandbox \
+     --package-path "$package_path" \
+     --cache-path "$cache_path" \
+@@ -28,6 +29,7 @@ swift_package_resolve() {
+ 
+ swift_package_run() {
+   swift run \
++    --disable-keychain \
+     --disable-sandbox \
+     --package-path "$package_path" \
+     --cache-path "$cache_path" \
