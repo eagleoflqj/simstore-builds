@@ -1,0 +1,12 @@
+id: home-assistant
+name: Home Assistant
+
+source:
+  license: Apache-2.0
+  repository: https://github.com/home-assistant/iOS
+  version: v2026.10.3
+  revision: 2524b83e1f6769ea781205a61cad5d1960806544
+
+build:
+  script: build.sh
+  deploymentTarget: "16.4"
