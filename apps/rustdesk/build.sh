@@ -2,6 +2,11 @@
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
 start_build "$@"
+export IPHONEOS_DEPLOYMENT_TARGET="$deployment_target"
+export LIBCLANG_PATH="$(dirname "$(xcrun --find clang)")/../lib"
+simulator_sdk=$(xcrun --sdk iphonesimulator --show-sdk-path)
+# Older binding generators pass the Rust triple directly to Clang.
+export BINDGEN_EXTRA_CLANG_ARGS="--target=arm64-apple-ios$deployment_target-simulator -isysroot \"$simulator_sdk\""
 "$VCPKG_ROOT/vcpkg" install aom libjpeg-turbo opus libvpx libyuv ffmpeg \
   --classic --triplet arm64-ios --host-triplet arm64-osx-release \
   --overlay-triplets="$app_dir/triplets" --overlay-ports="$source_dir/res/vcpkg" \
