@@ -44,7 +44,6 @@ jobs:
     if: needs.select.outputs.projects != '[]'
     name: Build ${{ matrix.id }}
     runs-on: xcode-27
-    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
