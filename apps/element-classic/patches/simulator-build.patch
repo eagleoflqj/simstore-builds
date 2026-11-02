@@ -1,0 +1,171 @@
+diff --git a/Podfile b/Podfile
+index 788d5a3..c64675b 100644
+--- a/Podfile
++++ b/Podfile
+@@ -1,4 +1,4 @@
+-source 'https://github.com/CocoaPods/Specs.git'
++source 'https://cdn.cocoapods.org'
+ 
+ # Uncomment this line to define a global platform for your project
+ platform :ios, '15.1'
+diff --git a/Podfile.lock b/Podfile.lock
+index 2d969ce..b2da97a 100644
+--- a/Podfile.lock
++++ b/Podfile.lock
+@@ -111,11 +111,6 @@ DEPENDENCIES:
+   - ZXingObjC (~> 3.6.9)
+ 
+ SPEC REPOS:
+-  https://github.com/CocoaPods/Specs.git:
+-    - JitsiMeetSDKLite
+-    - JitsiWebRTC
+-    - MatrixSDKCrypto
+-    - Sentry
+   trunk:
+     - AFNetworking
+     - BlueCryptor
+@@ -128,6 +123,8 @@ SPEC REPOS:
+     - GBDeviceInfo
+     - GZIP
+     - Introspect
++    - JitsiMeetSDKLite
++    - JitsiWebRTC
+     - KeychainAccess
+     - KituraContracts
+     - KTCenterFlowLayout
+@@ -135,9 +132,11 @@ SPEC REPOS:
+     - libPhoneNumber-iOS
+     - LoggerAPI
+     - Logging
++    - MatrixSDKCrypto
+     - ReadMoreTextView
+     - Realm
+     - Reusable
++    - Sentry
+     - SideMenu
+     - SwiftBase32
+     - SwiftFormat
+@@ -172,7 +171,7 @@ SPEC CHECKSUMS:
+   KeychainAccess: c0c4f7f38f6fc7bbe58f5702e25f7bd2f65abf51
+   KituraContracts: e845e60dc8627ad0a76fa55ef20a45451d8f830b
+   KTCenterFlowLayout: 6e02b50ab2bd865025ae82fe266ed13b6d9eaf97
+-  libbase58: 7c040313537b8c44b6e2d15586af8e21f7354efd
++  libbase58: 8abc2a53ac38cd37720c0acbc53ef3660e9016c2
+   libPhoneNumber-iOS: 0a32a9525cf8744fe02c5206eb30d571e38f7d75
+   LoggerAPI: ad9c4a6f1e32f518fdb43a1347ac14d765ab5e3d
+   Logging: beeb016c9c80cf77042d62e83495816847ef108b
+@@ -195,6 +194,6 @@ SPEC CHECKSUMS:
+   zxcvbn-ios: fef98b7c80f1512ff0eec47ac1fa399fc00f7e3c
+   ZXingObjC: 8898711ab495761b2dbbdec76d90164a6d7e14c5
+ 
+-PODFILE CHECKSUM: 2175eabdef596a2fe1471634cc6b439acc8d342a
++PODFILE CHECKSUM: 9646c25093e394c3155b258c87696d8eea053f48
+ 
+ COCOAPODS: 1.16.2
+diff --git a/Riot/Modules/Application/AppDelegate.swift b/Riot/Modules/Application/AppDelegate.swift
+index f16248a..038883e 100644
+--- a/Riot/Modules/Application/AppDelegate.swift
++++ b/Riot/Modules/Application/AppDelegate.swift
+@@ -115,3 +115,61 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
+         self.legacyAppDelegate.application(application, didReceiveRemoteNotification: userInfo, fetchCompletionHandler: completionHandler)
+     }
+ }
++
++/// Connect the existing single-window app to the scene lifecycle.
++@objc(ElementSceneDelegate)
++class SceneDelegate: UIResponder, UIWindowSceneDelegate {
++    var window: UIWindow?
++
++    private var appDelegate: AppDelegate? {
++        return UIApplication.shared.delegate as? AppDelegate
++    }
++
++    func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
++        guard let windowScene = scene as? UIWindowScene, let window = appDelegate?.window else {
++            return
++        }
++        self.window = window
++        window.windowScene = windowScene
++        window.frame = windowScene.coordinateSpace.bounds
++        window.makeKeyAndVisible()
++
++        self.scene(scene, openURLContexts: connectionOptions.urlContexts)
++        for activity in connectionOptions.userActivities {
++            self.scene(scene, continue: activity)
++        }
++    }
++
++    func sceneDidBecomeActive(_ scene: UIScene) {
++        appDelegate?.applicationDidBecomeActive(UIApplication.shared)
++    }
++
++    func sceneWillResignActive(_ scene: UIScene) {
++        appDelegate?.applicationWillResignActive(UIApplication.shared)
++    }
++
++    func sceneWillEnterForeground(_ scene: UIScene) {
++        appDelegate?.applicationWillEnterForeground(UIApplication.shared)
++    }
++
++    func sceneDidEnterBackground(_ scene: UIScene) {
++        appDelegate?.applicationDidEnterBackground(UIApplication.shared)
++    }
++
++    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
++        for context in URLContexts {
++            var options: [UIApplication.OpenURLOptionsKey: Any] = [.openInPlace: context.options.openInPlace]
++            if let sourceApplication = context.options.sourceApplication {
++                options[.sourceApplication] = sourceApplication
++            }
++            if let annotation = context.options.annotation {
++                options[.annotation] = annotation
++            }
++            _ = appDelegate?.application(UIApplication.shared, open: context.url, options: options)
++        }
++    }
++
++    func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
++        _ = appDelegate?.application(UIApplication.shared, continue: userActivity, restorationHandler: { _ in })
++    }
++}
+diff --git a/Riot/SupportingFiles/Info.plist b/Riot/SupportingFiles/Info.plist
+index c9b7763..dfe89d3 100644
+--- a/Riot/SupportingFiles/Info.plist
++++ b/Riot/SupportingFiles/Info.plist
+@@ -2,6 +2,23 @@
+ <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+ <plist version="1.0">
+ <dict>
++	<key>UIApplicationSceneManifest</key>
++	<dict>
++		<key>UIApplicationSupportsMultipleScenes</key>
++		<false/>
++		<key>UISceneConfigurations</key>
++		<dict>
++			<key>UIWindowSceneSessionRoleApplication</key>
++			<array>
++				<dict>
++					<key>UISceneConfigurationName</key>
++					<string>Default Configuration</string>
++					<key>UISceneDelegateClassName</key>
++					<string>ElementSceneDelegate</string>
++				</dict>
++			</array>
++		</dict>
++	</dict>
+ 	<key>UIDesignRequiresCompatibility</key>
+ 	<true/>
+ 	<key>CFBundleDevelopmentRegion</key>
+diff --git a/Riot/target.yml b/Riot/target.yml
+index 961b1ef..43d3f9e 100644
+--- a/Riot/target.yml
++++ b/Riot/target.yml
+@@ -70,7 +70,7 @@ targets:
+       script: |
+         # homebrew uses a non-standard directory on M1
+         if [[ $(arch) = arm64 ]]; then export PATH="$PATH:/opt/homebrew/bin"; fi
+-        xcrun --sdk macosx mint run Asana/locheck@0.9.6 discoverlproj --treat-warnings-as-errors --ignore-missing --ignore lproj_file_missing_from_translation "$PROJECT_DIR/Riot/Assets"
++        xcrun --sdk macosx "$LOCHECK" discoverlproj --treat-warnings-as-errors --ignore-missing --ignore lproj_file_missing_from_translation "$PROJECT_DIR/Riot/Assets"
+ 
+     sources:
+     - path: ../RiotSwiftUI/Modules

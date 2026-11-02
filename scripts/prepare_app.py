@@ -25,11 +25,11 @@ def prepare(app: str | Path, strip_symbols: bool = False) -> None:
         if magic not in MACH_MAGICS:
             continue
         architectures = set(run('xcrun', 'lipo', '-archs', str(path)).split())
-        if 'arm64' not in architectures or architectures - {'arm64', 'x86_64'}:
+        if 'arm64' not in architectures or architectures - {'arm64', 'x86_64', 'i386'}:
             raise ValueError(f'Unexpected architecture(s): {path}')
         if magic == bytes.fromhex('cffaedfe'):
             continue
-        # Prebuilt Simulator frameworks may include Intel slices. Flutter's
+        # Prebuilt Simulator frameworks may include 32/64-bit Intel slices. Flutter's
         # lipo -extract arm64 can also leave a fat header with just one slice.
         mode = stat.S_IMODE(path.stat().st_mode)
         fd, temporary = tempfile.mkstemp(prefix='.thin-', dir=path.parent)
