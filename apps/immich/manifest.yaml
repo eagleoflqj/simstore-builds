@@ -1,0 +1,12 @@
+id: immich
+name: Immich
+
+source:
+  license: AGPL-3.0-only
+  repository: https://github.com/immich-app/immich
+  version: v3.3.5
+  revision: 8303cb117e197c700332b33b61b45314c9cc5bb4
+
+build:
+  script: build.sh
+  deploymentTarget: "15.0"
