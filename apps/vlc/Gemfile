@@ -1,0 +1,4 @@
+source 'https://rubygems.org'
+
+# Match VLC 3.7.4's Podfile.lock.
+gem 'cocoapods', '= 1.16.2'

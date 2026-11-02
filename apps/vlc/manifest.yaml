@@ -1,0 +1,10 @@
+id: vlc
+name: VLC
+source:
+  license: GPL-2.0-or-later OR MPL-2.0
+  repository: https://github.com/videolan/vlc-ios
+  version: v3.7.4
+  revision: 45fe7aaf70f9c00734148e41089874f7c742de1e
+build:
+  script: build.sh
+  deploymentTarget: "15.0"
