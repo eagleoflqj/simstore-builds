@@ -1,0 +1,12 @@
+id: utm
+name: UTM
+
+source:
+  license: Apache-2.0
+  repository: https://github.com/utmapp/UTM
+  version: v5.0.8
+  revision: 535d6592a8bdc22b48de53703a371b80bf60d587
+
+build:
+  script: build.sh
+  deploymentTarget: "15.0"

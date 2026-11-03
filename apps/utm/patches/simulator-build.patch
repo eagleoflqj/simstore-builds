@@ -1,0 +1,103 @@
+diff --git a/patches/sources b/patches/sources
+index bd464fe..5cfb9fb 100644
+--- a/patches/sources
++++ b/patches/sources
+@@ -5,8 +5,8 @@ PKG_CONFIG_SRC="https://pkgconfig.freedesktop.org/releases/pkg-config-0.29.2.tar
+ 
+ # Source files for qemu
+ FFI_SRC="https://github.com/libffi/libffi/releases/download/v3.5.0/libffi-3.5.0.tar.gz"
+-ICONV_SRC="http://ftp.gnu.org/gnu/libiconv/libiconv-1.16.tar.gz"
+-GETTEXT_SRC="http://ftp.gnu.org/gnu/gettext/gettext-0.22.5.tar.gz"
++ICONV_SRC="https://ftp.gnu.org/gnu/libiconv/libiconv-1.16.tar.gz"
++GETTEXT_SRC="https://ftp.gnu.org/gnu/gettext/gettext-0.22.5.tar.gz"
+ PNG_SRC="https://ftp.osuosl.org/pub/blfs/conglomeration/libpng/libpng-1.6.48.tar.xz"
+ JPEG_TURBO_SRC="https://ftp.osuosl.org/pub/blfs/conglomeration/libjpeg-turbo/libjpeg-turbo-1.5.3.tar.gz"
+ GLIB_SRC="https://download.gnome.org/sources/glib/2.83/glib-2.83.0.tar.xz"
+@@ -30,7 +30,7 @@ JSON_GLIB_SRC="https://download.gnome.org/sources/json-glib/1.10/json-glib-1.10.
+ GST_SRC="https://gstreamer.freedesktop.org/src/gstreamer/gstreamer-1.19.1.tar.xz"
+ GST_BASE_SRC="https://gstreamer.freedesktop.org/src/gst-plugins-base/gst-plugins-base-1.19.1.tar.xz"
+ GST_GOOD_SRC="https://gstreamer.freedesktop.org/src/gst-plugins-good/gst-plugins-good-1.19.1.tar.xz"
+-XML2_SRC="http://xmlsoft.org/sources/libxml2-2.9.12.tar.gz"
++XML2_SRC="https://download.gnome.org/sources/libxml2/2.9/libxml2-2.9.12.tar.xz"
+ SOUP_SRC="https://download.gnome.org/sources/libsoup/3.6/libsoup-3.6.0.tar.xz"
+ PHODAV_SRC="https://download.gnome.org/sources/phodav/3.0/phodav-3.0.tar.xz"
+ SPICE_CLIENT_SRC="https://www.spice-space.org/download/gtk/spice-gtk-0.42.tar.xz"
+diff --git a/scripts/build_dependencies.sh b/scripts/build_dependencies.sh
+index 4ef513a..de213eb 100755
+--- a/scripts/build_dependencies.sh
++++ b/scripts/build_dependencies.sh
+@@ -71,10 +71,16 @@ python_module_test () {
+ 
+ check_env () {
+     command -v brew >/dev/null 2>&1 || { echo >&2 "${RED}Homebrew is required to be installed.${NC}"; exit 1; }
+-    brew --prefix llvm >/dev/null 2>&1 || { echo >&2 "${RED}You must install 'llvm' from Homebrew.${NC}"; exit 1; }
+-    brew --prefix spirv-llvm-translator >/dev/null 2>&1 || { echo >&2 "${RED}You must install 'spirv-llvm-translator' from Homebrew.${NC}"; exit 1; }
+-    brew --prefix libxcb >/dev/null 2>&1 || { echo >&2 "${RED}You must install 'libxcb' from Homebrew.${NC}"; exit 1; }
+-    brew --prefix libxrandr >/dev/null 2>&1 || { echo >&2 "${RED}You must install 'libxrandr' from Homebrew.${NC}"; exit 1; }
++    # Simulator builds use a stub Vulkan driver and do not build Mesa host tools.
++    case "$PLATFORM" in
++    *simulator* ) ;;
++    * )
++        brew --prefix llvm >/dev/null 2>&1 || { echo >&2 "${RED}You must install 'llvm' from Homebrew.${NC}"; exit 1; }
++        brew --prefix spirv-llvm-translator >/dev/null 2>&1 || { echo >&2 "${RED}You must install 'spirv-llvm-translator' from Homebrew.${NC}"; exit 1; }
++        brew --prefix libxcb >/dev/null 2>&1 || { echo >&2 "${RED}You must install 'libxcb' from Homebrew.${NC}"; exit 1; }
++        brew --prefix libxrandr >/dev/null 2>&1 || { echo >&2 "${RED}You must install 'libxrandr' from Homebrew.${NC}"; exit 1; }
++        ;;
++    esac
+     command -v python3 >/dev/null 2>&1 || { echo >&2 "${RED}You must install 'python3' on your host machine.${NC}"; exit 1; }
+     python_module_test six >/dev/null 2>&1 || { echo >&2 "${RED}'six' not found in your Python 3 installation.${NC}"; exit 1; }
+     python_module_test pyparsing >/dev/null 2>&1 || { echo >&2 "${RED}'pyparsing' not found in your Python 3 installation.${NC}"; exit 1; }
+@@ -221,12 +227,17 @@ download_all () {
+     clone $VIRGLRENDERER_REPO $VIRGLRENDERER_COMMIT
+     clone $HYPERVISOR_REPO $HYPERVISOR_COMMIT
+     clone $LIBUCONTEXT_REPO $LIBUCONTEXT_COMMIT
+-    clone $MESA_REPO $MESA_COMMIT
++    case "$PLATFORM" in
++    *simulator* ) ;;
++    * ) clone $MESA_REPO $MESA_COMMIT ;;
++    esac
+     clone $MOLTENVK_REPO $MOLTENVK_COMMIT
+     clone_moltenvk_dependences $MOLTENVK_REPO
+     download $LLVM15_SRC
+     clone $DXMT_REPO $DXMT_COMMIT
+-    clone $D3DMETAL_REPO $D3DMETAL_COMMIT
++    if [ "$ARCH" == "x86_64" -a "$PLATFORM" == "macos" ]; then
++        clone $D3DMETAL_REPO $D3DMETAL_COMMIT
++    fi
+ }
+ 
+ copy_private_headers() {
+@@ -715,6 +726,8 @@ build_angle () {
+     pwd="$(pwd)"
+     cd "$BUILD_DIR/WebKit.git/Source/ThirdParty/ANGLE"
+     env -i PATH=$PATH xcodebuild archive -archivePath "ANGLE" \
++                                         -derivedDataPath "$PWD/DerivedData" \
++                                         -jobs "$NCPU" \
+                                          -scheme "ANGLE" \
+                                          -sdk $SDK \
+                                          -arch $ARCH \
+@@ -749,6 +762,8 @@ build_hypervisor () {
+ 
+     echo "${GREEN}Building Hypervisor...${NC}"
+     env -i PATH=$PATH xcodebuild archive -archivePath "Hypervisor" -scheme "$scheme" -sdk $SDK -configuration "$BUILD_CONFIGURATION" \
++                                         -derivedDataPath "$PWD/DerivedData" -arch "$ARCH" -jobs "$NCPU" \
++                                         CODE_SIGNING_ALLOWED=NO \
+                                          IPHONEOS_DEPLOYMENT_TARGET="$IOS_SDKMINVER" \
+                                          MACOSX_DEPLOYMENT_TARGET="$MAC_SDKMINVER" \
+                                          XROS_DEPLOYMENT_TARGET="$VISIONOS_SDKMINVER"
+@@ -854,8 +869,13 @@ build_moltenvk() {
+         MVK_PLATFORM="macos"
+         ;;
+     esac
+-    env -i PATH=$PATH HOME=$HOME LANG=en_US.UTF-8 ./fetchDependencies --$MVK_PLATFORM -v
+-    env -i PATH=$PATH HOME=$HOME LANG=en_US.UTF-8 make $MVK_PLATFORM$DEBUG_FLAGS
++    printf 'ARCHS = %s\nONLY_ACTIVE_ARCH = YES\nCODE_SIGNING_ALLOWED = NO\n' "$ARCH" > utm.xcconfig
++    env -i PATH=$PATH HOME=$HOME LANG=en_US.UTF-8 XCODE_XCCONFIG_FILE="$PWD/utm.xcconfig" \
++        ./fetchDependencies --$MVK_PLATFORM -v
++    MVK_XCODEBUILD="set -o pipefail && \"$(xcrun --find xcodebuild)\" -derivedDataPath \"$PWD/DerivedData\" -jobs $NCPU CODE_SIGNING_ALLOWED=NO"
++    env -i PATH=$PATH HOME=$HOME LANG=en_US.UTF-8 \
++        XCODE_XCCONFIG_FILE="$PWD/utm.xcconfig" XCODEBUILD="$MVK_XCODEBUILD" OUTPUT_FMT_CMD= \
++        make -e $MVK_PLATFORM$DEBUG_FLAGS
+     if [ "$PLATFORM" == "macos" ]; then
+         $(xcrun --sdk $SDK --find lipo) "Package/$BUILD_CONFIGURATION/MoltenVK/dylib/macOS/libMoltenVK.dylib" -extract $ARCH -output "$PREFIX/lib/libMoltenVK.dylib"
+     else
