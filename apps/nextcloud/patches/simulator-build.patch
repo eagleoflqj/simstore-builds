@@ -1,0 +1,40 @@
+diff --git a/Nextcloud.xcodeproj/project.pbxproj b/Nextcloud.xcodeproj/project.pbxproj
+index 99c797f..870e89c 100644
+--- a/Nextcloud.xcodeproj/project.pbxproj
++++ b/Nextcloud.xcodeproj/project.pbxproj
+@@ -4117,10 +4117,8 @@
+ 				F77B0EDC1D118A16002130FE /* Frameworks */,
+ 				F77B0EE91D118A16002130FE /* Resources */,
+ 				F77B0F981D118A16002130FE /* Embed Foundation Extensions */,
+-				AFBFD01327551A54002244BC /* ShellScript */,
+ 				F76DA934277B75710082465B /* Embed Frameworks */,
+ 				F721C7FE3040345700DD9D36 /* CopyFiles */,
+-				F76995F02F99EF6C00291FA7 /* Crashlytics dSYM Upload */,
+ 			);
+ 			buildRules = (
+ 			);
+@@ -6772,9 +6770,8 @@
+ 				GENERATE_INFOPLIST_FILE = YES;
+ 				HEADER_SEARCH_PATHS = (
+ 					"$(inherited)",
+-					"$(BUILD_DIR)/../../SourcePackages/checkouts/realm-swift/include",
+-					"$(BUILD_DIR)/../../SourcePackages/checkouts/GRDB.swift/Sources/GRDBSQLite",
+-					"$(BUILD_DIR)/../../../../../SourcePackages/checkouts/GRDB.swift/Sources/GRDBSQLite",
++					"$(SOURCE_PACKAGES_DIR)/checkouts/realm-swift/include",
++					"$(SOURCE_PACKAGES_DIR)/checkouts/GRDB.swift/Sources/GRDBSQLite",
+ 				);
+ 				INFOPLIST_FILE = "$(SRCROOT)/Brand/BackgroundUploadExtension.plist";
+ 				INFOPLIST_KEY_CFBundleDisplayName = BackgroundUploadExtension;
+@@ -6828,10 +6825,8 @@
+ 				GENERATE_INFOPLIST_FILE = YES;
+ 				HEADER_SEARCH_PATHS = (
+ 					"$(inherited)",
+-					"$(BUILD_DIR)/../../SourcePackages/checkouts/realm-swift/include",
+-					"$(BUILD_DIR)/../../../../../SourcePackages/checkouts/realm-swift/include",
+-					"$(BUILD_DIR)/../../SourcePackages/checkouts/GRDB.swift/Sources/GRDBSQLite",
+-					"$(BUILD_DIR)/../../../../../SourcePackages/checkouts/GRDB.swift/Sources/GRDBSQLite",
++					"$(SOURCE_PACKAGES_DIR)/checkouts/realm-swift/include",
++					"$(SOURCE_PACKAGES_DIR)/checkouts/GRDB.swift/Sources/GRDBSQLite",
+ 				);
+ 				INFOPLIST_FILE = "$(SRCROOT)/Brand/BackgroundUploadExtension.plist";
+ 				INFOPLIST_KEY_CFBundleDisplayName = BackgroundUploadExtension;
