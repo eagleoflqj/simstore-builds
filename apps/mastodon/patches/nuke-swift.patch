@@ -1,0 +1,13 @@
+diff --git a/Sources/Core/ImagePipeline.swift b/Sources/Core/ImagePipeline.swift
+index 9d4ec50085b779231fa5490c4608d97f614fdcf5..1704652ea32ec9f051340d3f039368003fcc654e 100644
+--- a/Sources/Core/ImagePipeline.swift
++++ b/Sources/Core/ImagePipeline.swift
+@@ -283,7 +283,7 @@ public final class ImagePipeline {
+                 box.task = loadData(with: request.asImageRequest(), isConfined: false, queue: nil, progress: nil, onCancel: {
+                     continuation.resume(throwing: CancellationError())
+                 }, completion: {
+-                    continuation.resume(with: $0)
++                    continuation.resume(with: $0.map { ($0.data, $0.response) })
+                 })
+             }
+         })
