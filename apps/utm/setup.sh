@@ -7,6 +7,10 @@ xcode_version=$(xcodebuild -version)
   echo "Requires Xcode $XCODE_VERSION." >&2
   exit 1
 }
+if ! xcrun metal --version > /dev/null 2>&1; then
+  xcodebuild -downloadComponent MetalToolchain
+fi
+xcrun metal --version
 missing=()
 for formula in bison pkg-config gettext glib libgpg-error nasm make cmake ninja; do
   brew list --versions "$formula" >/dev/null 2>&1 || missing+=("$formula")
