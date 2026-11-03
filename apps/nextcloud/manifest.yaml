@@ -1,0 +1,12 @@
+id: nextcloud
+name: Nextcloud
+
+source:
+  license: GPL-3.0-or-later
+  repository: https://github.com/nextcloud/ios
+  version: v35.2.2
+  revision: bb593bb65e569355a66b2b5abcf2cc19c76d18c4
+
+build:
+  script: build.sh
+  deploymentTarget: "17.0"
