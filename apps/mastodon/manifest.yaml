@@ -1,0 +1,12 @@
+id: mastodon
+name: Mastodon
+
+source:
+  license: GPL-3.0-only
+  repository: https://github.com/mastodon/mastodon-ios
+  version: v2026.7.0
+  revision: 5773523575e14d1ce23090a48955117aad494d7a
+
+build:
+  script: build.sh
+  deploymentTarget: "18.6"
