@@ -40,12 +40,13 @@ class CatalogTests(unittest.TestCase):
 
     def test_final_catalog_requires_metadata(self) -> None:
         with self.assertRaisesRegex(CatalogError, 'description'):
-            validate_index(fragment(), require_metadata=True)
+            validate_index(fragment(), require_complete=True)
         data = fragment()
         data['apps'][0]['description'] = {'en': 'An example application.', 'zh-Hans': '示例应用。'}
         data['apps'][0]['categories'] = ['utilities']
-        self.assertEqual(validate_index(data, require_metadata=True), data)
-        self.assertEqual(merge_indexes([validate_index(data, require_metadata=True)]), data)
+        data['apps'][0]['versions'][0]['time'] = 1793503193
+        self.assertEqual(validate_index(data, require_complete=True), data)
+        self.assertEqual(merge_indexes([validate_index(data, require_complete=True)]), data)
 
     def test_invalid_localized_descriptions_are_rejected(self) -> None:
         value: object
@@ -56,7 +57,33 @@ class CatalogTests(unittest.TestCase):
                 data['apps'][0]['description'] = value
                 data['apps'][0]['categories'] = ['utilities']
                 with self.assertRaisesRegex(CatalogError, 'description'):
-                    validate_index(data, require_metadata=True)
+                    validate_index(data, require_complete=True)
+
+    def test_final_catalog_requires_time_for_every_version(self) -> None:
+        data = fragment()
+        data['apps'][0]['description'] = {'en': 'Example.'}
+        data['apps'][0]['categories'] = ['utilities']
+        data['apps'][0]['versions'][0]['time'] = 1793503193
+        data['apps'][0]['versions'].extend(fragment(version='1.0.0')['apps'][0]['versions'])
+        with self.assertRaisesRegex(CatalogError, 'time is required'):
+            validate_index(data, require_complete=True)
+
+    def test_time_round_trips_through_validation_and_merging(self) -> None:
+        first, second = fragment(), fragment(version='2.0.0')
+        first['apps'][0]['versions'][0]['time'] = 0
+        second['apps'][0]['versions'][0]['time'] = 1793503193
+        merged = merge_indexes([first, second])
+        self.assertEqual(validate_index(merged), merged)
+        self.assertEqual([record['time'] for record in merged['apps'][0]['versions']], [1793503193, 0])
+
+    def test_invalid_time_is_rejected(self) -> None:
+        value: object
+        for value in (None, True, False, -1, 1.5, '1793503193', [], {}):
+            with self.subTest(value=value):
+                data = json.loads(json.dumps(fragment()))
+                data['apps'][0]['versions'][0]['time'] = value
+                with self.assertRaisesRegex(CatalogError, 'time'):
+                    validate_index(data)
 
     def test_conflicting_localized_descriptions_fail(self) -> None:
         first, second = fragment(), fragment(version='2.0.0')

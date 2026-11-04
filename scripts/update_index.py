@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 import hashlib
 import json
 from pathlib import Path
@@ -11,10 +12,11 @@ import subprocess
 import sys
 import tempfile
 from typing import TypedDict, cast
+from urllib.parse import quote
 from uuid import uuid4
 
 from catalog import CatalogError, Index, merge_indexes, validate_index
-from schema import Metadata, validate_metadata
+from schema import Metadata, mapping, string, unix_timestamp, validate_metadata
 
 
 class Asset(TypedDict):
@@ -85,6 +87,16 @@ def load_metadata(path: Path) -> Metadata:
     return validate_metadata(load_yaml(path), str(path))
 
 
+def tag_commit_time(tag: str) -> int:
+    data = mapping(api_json(f'repos/{{owner}}/{{repo}}/commits/{quote(tag, safe="")}'), tag)
+    commit = mapping(data.get('commit'), f'{tag} commit')
+    committer = mapping(commit.get('committer'), f'{tag} committer')
+    date = datetime.fromisoformat(string(committer.get('date'), f'{tag} commit date').replace('Z', '+00:00'))
+    if date.tzinfo is None:
+        raise CatalogError(f'{tag}: commit date must include a timezone')
+    return unix_timestamp(int(date.timestamp()), f'{tag}.time')
+
+
 def collect_index(releases: list[Release]) -> Index:
     fragments: list[Index] = []
     for release in releases:
@@ -105,6 +117,7 @@ def collect_index(releases: list[Release]) -> Index:
         app = fragment['apps'][0]
         record = app['versions'][0]
         verify_asset(archive, record['size'], record['sha256'])
+        record['time'] = tag_commit_time(tag)
         fragments.append(fragment)
     index = merge_indexes(fragments)
     for app in index['apps']:
@@ -136,7 +149,7 @@ def delete_asset(asset_id: int) -> None:
 
 
 def publish_index(path: Path) -> None:
-    payload = index_bytes(merge_indexes([validate_index(json.loads(path.read_bytes()), require_metadata=True)]))
+    payload = index_bytes(merge_indexes([validate_index(json.loads(path.read_bytes()), require_complete=True)]))
     latest = next((release for release in list_releases() if release['tag_name'] == 'latest'), None)
     if latest is not None and latest.get('immutable'):
         raise CatalogError('The latest Release must allow asset updates')

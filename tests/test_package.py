@@ -82,6 +82,7 @@ class PackageTests(unittest.TestCase):
         record = app['versions'][0]
         self.assertNotIn('description', record)
         self.assertNotIn('categories', record)
+        self.assertNotIn('time', record)
         archive = self.output / 'example.app.tar.bz2'
         self.assertNotIn('downloadURL', record)
         self.assertNotIn('buildNumber', record)

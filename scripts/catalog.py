@@ -5,12 +5,16 @@ import re
 from typing import TypedDict
 
 from schema import (METADATA_FIELDS, Metadata, ValidationError, app_id, git_revision, mapping, nonempty_string,
-                    os_version, release_version, repository, string, validate_metadata, version_key)
+                    os_version, release_version, repository, string, unix_timestamp, validate_metadata, version_key)
 
 CatalogError = ValidationError
 
 
-class AppVersion(TypedDict):
+class VersionMetadata(TypedDict, total=False):
+    time: int
+
+
+class AppVersion(VersionMetadata):
     version: str
     minSimulatorOS: str
     sha256: str
@@ -38,7 +42,7 @@ class Index(TypedDict):
     apps: list[App]
 
 
-def validate_index(value: object, *, require_metadata: bool = False) -> Index:
+def validate_index(value: object, *, require_complete: bool = False) -> Index:
     data = mapping(value, 'index', ('schemaVersion', 'apps'))
     if type(data.get('schemaVersion')) is not int or data['schemaVersion'] != 1:
         raise CatalogError('Expected schemaVersion 1')
@@ -62,7 +66,7 @@ def validate_index(value: object, *, require_metadata: bool = False) -> Index:
         versions: list[AppVersion] = []
         for raw_version in raw_versions:
             record = mapping(raw_version, f'{identifier} version',
-                             ('version', 'minSimulatorOS', 'sha256', 'size', 'revision', 'recipeRevision'))
+                             ('version', 'minSimulatorOS', 'sha256', 'size', 'revision', 'recipeRevision'), ('time',))
             version = release_version(record.get('version'), 'version')
             minimum = string(record.get('minSimulatorOS'), 'minSimulatorOS')
             os_version(minimum, 'minSimulatorOS')
@@ -77,12 +81,16 @@ def validate_index(value: object, *, require_metadata: bool = False) -> Index:
             versions.append({'version': version, 'minSimulatorOS': minimum, 'sha256': digest,
                              'size': size, 'revision': revision,
                              'recipeRevision': recipe})
+            if 'time' in record:
+                versions[-1]['time'] = unix_timestamp(record['time'], f'{identifier}/{version}.time')
         normalized: App = {'id': identifier, 'name': name, 'bundleID': bundle,
                            'repository': source_repository, 'license': license_name, 'versions': versions}
-        if require_metadata or any(field in app for field in METADATA_FIELDS):
+        if require_complete or any(field in app for field in METADATA_FIELDS):
             details = validate_metadata({field: app[field] for field in METADATA_FIELDS if field in app}, identifier)
             normalized['description'] = details['description']
             normalized['categories'] = details['categories']
+        if require_complete and any('time' not in record for record in versions):
+            raise CatalogError(f'{identifier}: every version.time is required')
         apps.append(normalized)
     return {'schemaVersion': 1, 'apps': apps}
 
