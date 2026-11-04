@@ -4,8 +4,8 @@ from __future__ import annotations
 import re
 from typing import TypedDict
 
-from schema import (ValidationError, app_id, git_revision, localized_description, mapping, nonempty_string,
-                    os_version, release_version, repository, string, version_key)
+from schema import (METADATA_FIELDS, Metadata, ValidationError, app_id, git_revision, mapping, nonempty_string,
+                    os_version, release_version, repository, string, validate_metadata, version_key)
 
 CatalogError = ValidationError
 
@@ -21,6 +21,7 @@ class AppVersion(TypedDict):
 
 class AppMetadata(TypedDict, total=False):
     description: dict[str, str]
+    categories: list[str]
 
 
 class App(AppMetadata):
@@ -37,7 +38,7 @@ class Index(TypedDict):
     apps: list[App]
 
 
-def validate_index(value: object, *, require_descriptions: bool = False) -> Index:
+def validate_index(value: object, *, require_metadata: bool = False) -> Index:
     data = mapping(value, 'index', ('schemaVersion', 'apps'))
     if type(data.get('schemaVersion')) is not int or data['schemaVersion'] != 1:
         raise CatalogError('Expected schemaVersion 1')
@@ -47,7 +48,7 @@ def validate_index(value: object, *, require_descriptions: bool = False) -> Inde
     apps: list[App] = []
     for raw_app in raw_apps:
         app = mapping(raw_app, 'app', ('id', 'name', 'bundleID', 'repository', 'license', 'versions'),
-                      ('description',))
+                      METADATA_FIELDS)
         identifier = app_id(app.get('id'), 'app.id')
         name = string(app.get('name'), f'{identifier}.name')
         source_repository = repository(app.get('repository'), f'{identifier}.repository')
@@ -78,8 +79,10 @@ def validate_index(value: object, *, require_descriptions: bool = False) -> Inde
                              'recipeRevision': recipe})
         normalized: App = {'id': identifier, 'name': name, 'bundleID': bundle,
                            'repository': source_repository, 'license': license_name, 'versions': versions}
-        if require_descriptions or 'description' in app:
-            normalized['description'] = localized_description(app.get('description'), f'{identifier}.description')
+        if require_metadata or any(field in app for field in METADATA_FIELDS):
+            details = validate_metadata({field: app[field] for field in METADATA_FIELDS if field in app}, identifier)
+            normalized['description'] = details['description']
+            normalized['categories'] = details['categories']
         apps.append(normalized)
     return {'schemaVersion': 1, 'apps': apps}
 
@@ -88,7 +91,7 @@ def merge_indexes(indexes: list[Index]) -> Index:
     entries: dict[str, dict[str, AppVersion]] = {}
     metadata: dict[str, tuple[tuple[int, int, int], set[tuple[str, str, str]]]] = {}
     bundles: dict[str, str] = {}
-    descriptions: dict[str, dict[str, str]] = {}
+    app_metadata: dict[str, Metadata] = {}
     for index in indexes:
         for app in index['apps']:
             app_id = app['id']
@@ -96,9 +99,10 @@ def merge_indexes(indexes: list[Index]) -> Index:
                 raise CatalogError(f'{app_id}: conflicting Bundle IDs')
             bundles[app_id] = app['bundleID']
             if 'description' in app:
-                if app_id in descriptions and descriptions[app_id] != app['description']:
-                    raise CatalogError(f'{app_id}: conflicting descriptions')
-                descriptions[app_id] = app['description']
+                details_metadata: Metadata = {'description': app['description'], 'categories': app['categories']}
+                if app_id in app_metadata and app_metadata[app_id] != details_metadata:
+                    raise CatalogError(f'{app_id}: conflicting app metadata')
+                app_metadata[app_id] = details_metadata
             newest = max(version_key(record['version']) for record in app['versions'])
             details = (app['name'], app['repository'], app['license'])
             previous_metadata = metadata.get(app_id)
@@ -122,7 +126,8 @@ def merge_indexes(indexes: list[Index]) -> Index:
         merged_app: App = {'id': app_id, 'name': name, 'bundleID': bundles[app_id],
                            'repository': source_repository, 'license': license_name,
                            'versions': [records[release] for release in ordered]}
-        if app_id in descriptions:
-            merged_app['description'] = descriptions[app_id]
+        if app_id in app_metadata:
+            merged_app['description'] = app_metadata[app_id]['description']
+            merged_app['categories'] = app_metadata[app_id]['categories']
         apps.append(merged_app)
     return {'schemaVersion': 1, 'apps': apps}

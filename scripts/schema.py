@@ -16,6 +16,12 @@ class Source(TypedDict):
     license: str
 
 
+class Metadata(TypedDict):
+    description: dict[str, str]
+    categories: list[str]
+
+
+METADATA_FIELDS = ('description', 'categories')
 SOURCE_FIELDS = ('repository', 'revision', 'license')
 RELEASE_VERSION_PATTERN = r'(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)'
 
@@ -109,3 +115,18 @@ def localized_description(value: object, context: str) -> dict[str, str]:
         raise ValidationError(f'{context}.en is required as the fallback description')
     return {string(locale, f'{context} language'): string(text, f'{context}.{locale}')
             for locale, text in data.items()}
+
+
+def category_ids(value: object, context: str) -> list[str]:
+    if not isinstance(value, list) or not value:
+        raise ValidationError(f'{context} must be a nonempty array')
+    categories = [app_id(item, context) for item in value]
+    if len(set(categories)) != len(categories):
+        raise ValidationError(f'{context} must not contain duplicate categories')
+    return categories
+
+
+def validate_metadata(value: object, context: str) -> Metadata:
+    data = mapping(value, context, METADATA_FIELDS)
+    return {'description': localized_description(data['description'], f'{context}.description'),
+            'categories': category_ids(data['categories'], f'{context}.categories')}

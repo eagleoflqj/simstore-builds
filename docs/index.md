@@ -6,7 +6,7 @@ The client uses a fixed builds repository and reads the merged catalog from `rel
 
 Extract with `tar -xjpf <archive>` to preserve file permissions and symlinks.
 
-The main catalog uses this structure. Release fragments omit the app-level `description` field:
+The main catalog uses this structure. Release fragments omit the app-level `description` and `categories` fields:
 
 ```json
 {
@@ -19,6 +19,7 @@ The main catalog uses this structure. Release fragments omit the app-level `desc
         "en": "An example application.",
         "zh-Hans": "示例应用。"
       },
+      "categories": ["utilities"],
       "bundleID": "org.example.app",
       "repository": "https://github.com/owner/example",
       "license": "MIT",
@@ -43,18 +44,23 @@ A fragment contains one app and one version. Merge apps by `id` and versions by 
 
 `repository` and `license` belong to the app; the newest published version supplies both values for the whole app. `license` is required and contains the upstream repository's primary SPDX identifier for display; validation only requires a nonempty string. Each version's `revision` identifies its upstream source commit. These fields use the same validation rules as the recipe manifest's `source` fields.
 
-## Localized descriptions
+## App metadata
 
-Each published app must have an `apps/<id>/description.yaml` file containing a short, neutral description in each supported language:
+Each published app must have an `apps/<id>/meta.yaml` file with localized descriptions and category IDs:
 
 ```yaml
-en: An example application.
-zh-Hans: 示例应用。
+description:
+  en: An example application.
+  zh-Hans: 示例应用。
+categories:
+  - utilities
 ```
 
-Use language tags such as `en`, `zh-Hans`, or `pt-BR` as keys. English (`en`) is required as the fallback; each translation must be a nonempty, single-line string. The catalog stores all translations in the app-level `description` object so the client can select the user's language.
+Descriptions should be short and neutral. Use language tags such as `en`, `zh-Hans`, or `pt-BR` under `description`. English (`en`) is required as the fallback; each translation must be a nonempty, single-line string. The catalog stores all translations in the app-level `description` object so the client can select the user's language.
 
-Collection reads descriptions from the current checkout after merging all release fragments. Descriptions are independent of app versions and are omitted from build fragments. Changes to `apps/<id>/description.yaml` are excluded from automatic build selection. After editing descriptions or translations, rerun the `Update catalog` workflow; rebuilding or republishing apps is unnecessary.
+`categories` is a nonempty list of distinct IDs using lowercase letters, digits, and hyphens, starting with a letter. Current categories are `browser`, `cloud`, `communication`, `media`, `productivity`, `security`, `social`, and `utilities`. IDs remain independent of display language; the client supplies translated labels.
+
+Collection reads metadata from the current checkout after merging all release fragments. Descriptions and categories are independent of app versions and are omitted from build fragments. Changes to `apps/<id>/meta.yaml` are excluded from automatic build selection. After editing metadata, rerun the `Update catalog` workflow; rebuilding or republishing apps is unnecessary.
 
 ## Updating the catalog
 

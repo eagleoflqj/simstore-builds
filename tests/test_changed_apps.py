@@ -32,29 +32,63 @@ class ChangedAppsTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertEqual(select_projects(self.root, [path]), [])
 
-    def test_description_changes_do_not_select_apps(self) -> None:
-        self.assertEqual(select_projects(self.root, ['apps/alpha/description.yaml', 'apps/beta/description.yaml']), [])
-        self.assertEqual(select_projects(self.root, ['apps/alpha/description.yaml', 'apps/beta/build.sh']), ['beta'])
-        self.assertEqual(select_projects(self.root, ['apps/alpha/description.yaml'], 'alpha'), ['alpha'])
+    def test_metadata_changes_do_not_select_apps(self) -> None:
+        self.assertEqual(select_projects(self.root, ['apps/alpha/meta.yaml', 'apps/beta/meta.yaml']), [])
+        self.assertEqual(select_projects(self.root, ['apps/alpha/meta.yaml', 'apps/beta/build.sh']), ['beta'])
+        self.assertEqual(select_projects(self.root, ['apps/alpha/meta.yaml'], 'alpha'), ['alpha'])
 
-    def test_description_filename_in_recipe_subdirectory_is_not_excluded(self) -> None:
-        self.assertEqual(select_projects(self.root, ['apps/alpha/patches/description.yaml']), ['alpha'])
+    def test_metadata_filename_in_recipe_subdirectory_is_not_excluded(self) -> None:
+        self.assertEqual(select_projects(self.root, ['apps/alpha/patches/meta.yaml']), ['alpha'])
 
-    def test_description_only_commit_does_not_select_pr_or_push_builds(self) -> None:
+    def test_metadata_only_commit_does_not_select_pr_or_push_builds(self) -> None:
         self.git('init', '--initial-branch=main')
         self.git('config', 'user.name', 'Test')
         self.git('config', 'user.email', 'test@example.com')
         base = self.commit('apps/alpha/manifest.yaml')
-        (self.root / 'apps/alpha/description.yaml').write_text('en: Example application.\n')
-        head = self.commit('apps/alpha/description.yaml')
+        (self.root / 'apps/alpha/meta.yaml').write_text(
+            'description:\n  en: Example application.\ncategories: [utilities]\n')
+        head = self.commit('apps/alpha/meta.yaml')
         for event in ('push', 'pull_request'):
             with self.subTest(event=event):
                 paths = changed_paths(self.root, base, head, event)
-                self.assertEqual(paths, ['apps/alpha/description.yaml'])
+                self.assertEqual(paths, ['apps/alpha/meta.yaml'])
                 self.assertEqual(select_projects(self.root, paths), [])
 
     def test_shared_changes_do_not_expand_changed_recipe_selection(self) -> None:
         self.assertEqual(select_projects(self.root, ['scripts/package.py', 'apps/beta/build.sh']), ['beta'])
+
+    def test_metadata_migration_does_not_select_pr_or_push_builds(self) -> None:
+        self.git('init', '--initial-branch=main')
+        self.git('config', 'user.name', 'Test')
+        self.git('config', 'user.email', 'test@example.com')
+        for name in ('alpha', 'beta'):
+            (self.root / 'apps' / name / 'description.yaml').write_text('en: Example application.\n')
+        base = self.commit('apps/alpha/description.yaml')
+        for name in ('alpha', 'beta'):
+            (self.root / 'apps' / name / 'description.yaml').unlink()
+            (self.root / 'apps' / name / 'meta.yaml').write_text(
+                'description:\n  en: Example application.\ncategories: [utilities]\n')
+        head = self.commit('apps/alpha/meta.yaml')
+        for event in ('push', 'pull_request'):
+            with self.subTest(event=event):
+                paths = changed_paths(self.root, base, head, event)
+                self.assertEqual(len(paths), 4)
+                self.assertEqual(select_projects(self.root, paths), [])
+
+    def test_deleted_build_script_still_selects_app(self) -> None:
+        self.git('init', '--initial-branch=main')
+        self.git('config', 'user.name', 'Test')
+        self.git('config', 'user.email', 'test@example.com')
+        script = self.root / 'apps/alpha/build.sh'
+        script.write_text('#!/bin/sh\n')
+        base = self.commit('apps/alpha/build.sh')
+        script.unlink()
+        self.git('add', '.')
+        self.git('commit', '-m', 'Delete build script')
+        head = self.git('rev-parse', 'HEAD')
+        for event in ('push', 'pull_request'):
+            with self.subTest(event=event):
+                self.assertEqual(select_projects(self.root, changed_paths(self.root, base, head, event)), ['alpha'])
 
     def test_documentation_does_not_rebuild_apps(self) -> None:
         self.assertEqual(select_projects(self.root, ['README.md', 'AGENTS.md', 'LICENSE']), [])

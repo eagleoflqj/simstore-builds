@@ -38,13 +38,14 @@ class CatalogTests(unittest.TestCase):
                 with self.assertRaisesRegex(CatalogError, 'unknown fields unexpected'):
                     validate_index(data)
 
-    def test_final_catalog_requires_localized_descriptions(self) -> None:
+    def test_final_catalog_requires_metadata(self) -> None:
         with self.assertRaisesRegex(CatalogError, 'description'):
-            validate_index(fragment(), require_descriptions=True)
+            validate_index(fragment(), require_metadata=True)
         data = fragment()
         data['apps'][0]['description'] = {'en': 'An example application.', 'zh-Hans': '示例应用。'}
-        self.assertEqual(validate_index(data, require_descriptions=True), data)
-        self.assertEqual(merge_indexes([validate_index(data, require_descriptions=True)]), data)
+        data['apps'][0]['categories'] = ['utilities']
+        self.assertEqual(validate_index(data, require_metadata=True), data)
+        self.assertEqual(merge_indexes([validate_index(data, require_metadata=True)]), data)
 
     def test_invalid_localized_descriptions_are_rejected(self) -> None:
         value: object
@@ -53,14 +54,16 @@ class CatalogTests(unittest.TestCase):
             with self.subTest(value=value):
                 data = json.loads(json.dumps(fragment()))
                 data['apps'][0]['description'] = value
+                data['apps'][0]['categories'] = ['utilities']
                 with self.assertRaisesRegex(CatalogError, 'description'):
-                    validate_index(data, require_descriptions=True)
+                    validate_index(data, require_metadata=True)
 
     def test_conflicting_localized_descriptions_fail(self) -> None:
         first, second = fragment(), fragment(version='2.0.0')
         first['apps'][0]['description'] = {'en': 'Example.'}
         second['apps'][0]['description'] = {'en': 'Another description.'}
-        with self.assertRaisesRegex(CatalogError, 'conflicting descriptions'):
+        first['apps'][0]['categories'] = second['apps'][0]['categories'] = ['utilities']
+        with self.assertRaisesRegex(CatalogError, 'conflicting app metadata'):
             merge_indexes([first, second])
 
     def test_merge_preserves_history_and_sorts_versions_numerically(self) -> None:
@@ -74,6 +77,14 @@ class CatalogTests(unittest.TestCase):
         self.assertEqual(merged['apps'][1]['name'], 'New name')
         self.assertEqual(merged, merge_indexes(list(reversed(fragments))))
         self.assertEqual(fragments, original)
+
+    def test_conflicting_categories_fail(self) -> None:
+        first, second = fragment(), fragment(version='2.0.0')
+        first['apps'][0]['description'] = second['apps'][0]['description'] = {'en': 'Example.'}
+        first['apps'][0]['categories'] = ['utilities']
+        second['apps'][0]['categories'] = ['media']
+        with self.assertRaisesRegex(CatalogError, 'conflicting app metadata'):
+            merge_indexes([first, second])
 
     def test_identical_versions_are_deduplicated(self) -> None:
         self.assertEqual(merge_indexes([fragment(), fragment()]), fragment())
