@@ -14,7 +14,7 @@ from typing import TypedDict, cast
 from uuid import uuid4
 
 from catalog import CatalogError, Index, merge_indexes, validate_index
-from schema import localized_description
+from schema import Metadata, validate_metadata
 
 
 class Asset(TypedDict):
@@ -79,10 +79,10 @@ def parse_release_index(value: object, app_id: str, version: str) -> Index:
     return data
 
 
-def load_description(path: Path) -> dict[str, str]:
+def load_metadata(path: Path) -> Metadata:
     from yaml_reader import load_yaml
 
-    return localized_description(load_yaml(path), str(path))
+    return validate_metadata(load_yaml(path), str(path))
 
 
 def collect_index(releases: list[Release]) -> Index:
@@ -108,8 +108,9 @@ def collect_index(releases: list[Release]) -> Index:
         fragments.append(fragment)
     index = merge_indexes(fragments)
     for app in index['apps']:
-        app['description'] = load_description(
-            Path(__file__).resolve().parents[1] / 'apps' / app['id'] / 'description.yaml')
+        details = load_metadata(Path(__file__).resolve().parents[1] / 'apps' / app['id'] / 'meta.yaml')
+        app['description'] = details['description']
+        app['categories'] = details['categories']
     return index
 
 
@@ -135,7 +136,7 @@ def delete_asset(asset_id: int) -> None:
 
 
 def publish_index(path: Path) -> None:
-    payload = index_bytes(merge_indexes([validate_index(json.loads(path.read_bytes()), require_descriptions=True)]))
+    payload = index_bytes(merge_indexes([validate_index(json.loads(path.read_bytes()), require_metadata=True)]))
     latest = next((release for release in list_releases() if release['tag_name'] == 'latest'), None)
     if latest is not None and latest.get('immutable'):
         raise CatalogError('The latest Release must allow asset updates')

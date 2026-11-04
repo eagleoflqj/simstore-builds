@@ -77,9 +77,11 @@ class PackageTests(unittest.TestCase):
         self.assertEqual(index['schemaVersion'], 1)
         app = index['apps'][0]
         self.assertNotIn('description', app)
+        self.assertNotIn('categories', app)
         self.assertEqual((app['id'], app['name'], app['bundleID']), ('example', 'Example', 'org.simstore.example'))
         record = app['versions'][0]
         self.assertNotIn('description', record)
+        self.assertNotIn('categories', record)
         archive = self.output / 'example.app.tar.bz2'
         self.assertNotIn('downloadURL', record)
         self.assertNotIn('buildNumber', record)

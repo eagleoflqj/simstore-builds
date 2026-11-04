@@ -23,6 +23,7 @@ DESCRIPTION = {'en': 'An example application.', 'zh-Hans': '示例应用。'}
 def catalog() -> Index:
     data = fragment()
     data['apps'][0]['description'] = DESCRIPTION.copy()
+    data['apps'][0]['categories'] = ['utilities']
     return data
 
 
@@ -35,9 +36,10 @@ def release(tag: str = 'example/1.2.3') -> updater.Release:
 
 class CollectionTests(unittest.TestCase):
     def setUp(self) -> None:
-        descriptions = patch.object(updater, 'load_description', return_value=DESCRIPTION.copy())
-        descriptions.start()
-        self.addCleanup(descriptions.stop)
+        metadata = patch.object(updater, 'load_metadata',
+                                return_value={'description': DESCRIPTION.copy(), 'categories': ['utilities']})
+        metadata.start()
+        self.addCleanup(metadata.stop)
 
     def test_empty_license_is_rejected(self) -> None:
         invalid = fragment()
