@@ -17,6 +17,7 @@ import update_index as updater
 from catalog import CatalogError, Index
 from test_catalog import fragment
 
+COMMIT_TIME = 1793503193
 DESCRIPTION = {'en': 'An example application.', 'zh-Hans': '示例应用。'}
 
 
@@ -24,6 +25,7 @@ def catalog() -> Index:
     data = fragment()
     data['apps'][0]['description'] = DESCRIPTION.copy()
     data['apps'][0]['categories'] = ['utilities']
+    data['apps'][0]['versions'][0]['time'] = COMMIT_TIME
     return data
 
 
@@ -34,12 +36,47 @@ def release(tag: str = 'example/1.2.3') -> updater.Release:
                         'digest': 'sha256:' + 'c' * 64}]}
 
 
+class TagCommitTimeTests(unittest.TestCase):
+    def test_reads_committer_date_from_encoded_tag_ref(self) -> None:
+        data = {'commit': {'author': {'date': '2000-01-01T00:00:00Z'},
+                           'committer': {'date': '2026-11-01T03:19:53Z'}}}
+        with patch.object(updater, 'api_json', return_value=data) as api:
+            self.assertEqual(updater.tag_commit_time('example/1.2.3'), COMMIT_TIME)
+        api.assert_called_once_with('repos/{owner}/{repo}/commits/example%2F1.2.3')
+
+    def test_converts_timezone_offset_to_unix_seconds(self) -> None:
+        data = {'commit': {'committer': {'date': '2026-10-31T23:19:53-04:00'}}}
+        with patch.object(updater, 'api_json', return_value=data):
+            self.assertEqual(updater.tag_commit_time('example/1.2.3'), COMMIT_TIME)
+
+    def test_invalid_or_missing_commit_dates_fail(self) -> None:
+        value: object
+        data: object
+        for value in (None, '', 'invalid', '2026-11-01T03:19:53', '1960-01-01T00:00:00Z', 123):
+            with self.subTest(value=value):
+                data = {'commit': {'committer': {'date': value}}}
+                with patch.object(updater, 'api_json', return_value=data), self.assertRaises(ValueError):
+                    updater.tag_commit_time('example/1.2.3')
+        for data in ({}, {'commit': {}}, {'commit': {'committer': {}}}):
+            with self.subTest(data=data), patch.object(updater, 'api_json', return_value=data), \
+                 self.assertRaises(ValueError):
+                updater.tag_commit_time('example/1.2.3')
+
+    def test_unresolvable_tag_stops_collection(self) -> None:
+        with patch.object(updater, 'api_json', side_effect=subprocess.CalledProcessError(1, 'gh')):
+            with self.assertRaises(subprocess.CalledProcessError):
+                updater.tag_commit_time('example/1.2.3')
+
+
 class CollectionTests(unittest.TestCase):
     def setUp(self) -> None:
         metadata = patch.object(updater, 'load_metadata',
                                 return_value={'description': DESCRIPTION.copy(), 'categories': ['utilities']})
         metadata.start()
         self.addCleanup(metadata.stop)
+        commit_time = patch.object(updater, 'tag_commit_time', return_value=COMMIT_TIME)
+        self.commit_time = commit_time.start()
+        self.addCleanup(commit_time.stop)
 
     def test_empty_license_is_rejected(self) -> None:
         invalid = fragment()
@@ -65,8 +102,13 @@ class CollectionTests(unittest.TestCase):
             return fragment(version='1.0.0') if endpoint.endswith('/20') else fragment()
 
         with patch.object(updater, 'api_json', side_effect=fetch) as api:
+            self.commit_time.side_effect = [COMMIT_TIME - 3600, COMMIT_TIME]
             index = updater.collect_index([release('latest'), draft, prerelease, release('v1.0.0'), old, release()])
         self.assertEqual([record['version'] for record in index['apps'][0]['versions']], ['1.2.3', '1.0.0'])
+        self.assertEqual([record['time'] for record in index['apps'][0]['versions']],
+                         [COMMIT_TIME, COMMIT_TIME - 3600])
+        self.assertEqual([call.args for call in self.commit_time.call_args_list],
+                         [('example/1.0.0',), ('example/1.2.3',)])
         self.assertEqual(api.call_count, 2)
         self.assertTrue(all('releases/assets/' in call.args[0] for call in api.call_args_list))
 
@@ -108,6 +150,17 @@ class CollectionTests(unittest.TestCase):
             path = Path(temporary) / 'index.json'
             path.write_text('previous catalog')
             with patch.object(updater, 'list_releases', side_effect=subprocess.CalledProcessError(1, 'gh')):
+                with self.assertRaises(subprocess.CalledProcessError):
+                    updater.generate_index(path)
+            self.assertEqual(path.read_text(), 'previous catalog')
+
+    def test_failed_commit_lookup_preserves_previous_local_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / 'index.json'
+            path.write_text('previous catalog')
+            self.commit_time.side_effect = subprocess.CalledProcessError(1, 'gh')
+            with patch.object(updater, 'list_releases', return_value=[release()]), \
+                 patch.object(updater, 'api_json', return_value=fragment()):
                 with self.assertRaises(subprocess.CalledProcessError):
                     updater.generate_index(path)
             self.assertEqual(path.read_text(), 'previous catalog')
@@ -247,6 +300,15 @@ class PublishingTests(unittest.TestCase):
         self.path.write_bytes(updater.index_bytes(fragment()))
         with patch.object(updater, 'list_releases') as releases:
             with self.assertRaisesRegex(CatalogError, 'description'):
+                updater.publish_index(self.path)
+        releases.assert_not_called()
+
+    def test_catalog_without_time_is_rejected_before_api_requests(self) -> None:
+        data = catalog()
+        del data['apps'][0]['versions'][0]['time']
+        self.path.write_bytes(updater.index_bytes(data))
+        with patch.object(updater, 'list_releases') as releases:
+            with self.assertRaisesRegex(CatalogError, 'time'):
                 updater.publish_index(self.path)
         releases.assert_not_called()
 

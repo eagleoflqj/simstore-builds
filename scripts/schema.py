@@ -46,6 +46,12 @@ def nonempty_string(value: object, context: str) -> str:
     return value
 
 
+def unix_timestamp(value: object, context: str) -> int:
+    if type(value) is not int or value < 0:
+        raise ValidationError(f'{context} must be a nonnegative integer Unix timestamp in seconds')
+    return value
+
+
 def string(value: object, context: str) -> str:
     text = nonempty_string(value, context)
     if text != text.strip() or re.search(r'[\r\n\x00]', text):

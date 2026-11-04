@@ -15,7 +15,7 @@ from catalog import CatalogError, validate_index
 from schema import Metadata
 from update_index import load_metadata
 from test_catalog import fragment
-from test_update_index import release
+from test_update_index import COMMIT_TIME, release
 
 
 class MetadataTests(unittest.TestCase):
@@ -25,6 +25,9 @@ class MetadataTests(unittest.TestCase):
         self.metadata: Metadata = {'description': {'en': 'An example application.', 'zh-Hans': '示例应用。'},
                                    'categories': ['utilities', 'productivity']}
         self.path.write_text(json.dumps(self.metadata))
+        commit_time = patch.object(updater, 'tag_commit_time', return_value=COMMIT_TIME)
+        commit_time.start()
+        self.addCleanup(commit_time.stop)
 
     def tearDown(self) -> None:
         self.temporary.cleanup()
@@ -73,7 +76,7 @@ class MetadataTests(unittest.TestCase):
                 catalog = json.loads(json.dumps(fragment()))
                 catalog['apps'][0].update(data)
                 with self.assertRaisesRegex(CatalogError, field):
-                    validate_index(catalog, require_metadata=True)
+                    validate_index(catalog, require_complete=True)
 
     def test_invalid_categories_are_rejected_in_yaml_and_catalog(self) -> None:
         value: object
@@ -87,7 +90,7 @@ class MetadataTests(unittest.TestCase):
                 catalog = json.loads(json.dumps(fragment()))
                 catalog['apps'][0].update(data)
                 with self.assertRaisesRegex(CatalogError, 'categories'):
-                    validate_index(catalog, require_metadata=True)
+                    validate_index(catalog, require_complete=True)
 
     def test_collection_adds_current_metadata_without_mutating_fragment(self) -> None:
         data = fragment()
@@ -98,8 +101,9 @@ class MetadataTests(unittest.TestCase):
         app = index['apps'][0]
         self.assertEqual(app['description'], self.metadata['description'])
         self.assertEqual(app['categories'], self.metadata['categories'])
-        self.assertEqual(app['versions'], data['apps'][0]['versions'])
-        self.assertEqual(validate_index(index, require_metadata=True), index)
+        self.assertEqual(app['versions'], [{**record, 'time': COMMIT_TIME}
+                                           for record in data['apps'][0]['versions']])
+        self.assertEqual(validate_index(index, require_complete=True), index)
         self.assertEqual(data, original)
 
     def test_updating_metadata_only_changes_catalog_metadata(self) -> None:
