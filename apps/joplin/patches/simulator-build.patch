@@ -1,0 +1,188 @@
+diff --git a/packages/app-mobile/ios/.xcode.env b/packages/app-mobile/ios/.xcode.env
+index 4d27f3b..5feba45 100644
+--- a/packages/app-mobile/ios/.xcode.env
++++ b/packages/app-mobile/ios/.xcode.env
+@@ -8,6 +8,5 @@
+ # For example, to use nvm with brew, add the following line
+ # . "$(brew --prefix nvm)/nvm.sh" --no-use
+ 
+-# Note: `$(command -v node)` doesn't work so hardcode the path here - but it means it needs to be
+-# manually updated when Node is upgraded.
+-export NODE_BINARY=/opt/homebrew/opt/node@20/bin/node
++# Use the Node executable selected by the build environment.
++export NODE_BINARY="${NODE_BINARY:-$(command -v node)}"
+diff --git a/packages/app-mobile/ios/AppDelegate.swift b/packages/app-mobile/ios/AppDelegate.swift
+index 4f2337c..8d8eb1b 100644
+--- a/packages/app-mobile/ios/AppDelegate.swift
++++ b/packages/app-mobile/ios/AppDelegate.swift
+@@ -8,6 +8,7 @@ import ReactAppDependencyProvider
+ @UIApplicationMain
+ public class AppDelegate: ExpoAppDelegate, UNUserNotificationCenterDelegate {
+   var window: UIWindow?
++  var launchOptions: [UIApplication.LaunchOptionsKey: Any]?
+  
+   var reactNativeDelegate: ExpoReactNativeFactoryDelegate?
+   var reactNativeFactory: RCTReactNativeFactory?
+@@ -24,13 +25,7 @@ public class AppDelegate: ExpoAppDelegate, UNUserNotificationCenterDelegate {
+     reactNativeFactory = factory
+     bindReactNativeFactory(factory)
+  
+-#if os(iOS) || os(tvOS)
+-    window = UIWindow(frame: UIScreen.main.bounds)
+-    factory.startReactNative(
+-      withModuleName: "main",
+-      in: window,
+-      launchOptions: launchOptions)
+-#endif
++    self.launchOptions = launchOptions
+     
+     // Define UNUserNotificationCenter -- required by @react-native-community/push-notification-ios
+     let center = UNUserNotificationCenter.current();
+@@ -79,6 +74,93 @@ public class AppDelegate: ExpoAppDelegate, UNUserNotificationCenterDelegate {
+   }
+ }
+  
++// This app uses a single scene. Keep Expo's app-level callbacks connected to it.
++@objc(JoplinSceneDelegate)
++class SceneDelegate: UIResponder, UIWindowSceneDelegate {
++  var window: UIWindow?
++
++  private var appDelegate: AppDelegate? {
++    UIApplication.shared.delegate as? AppDelegate
++  }
++
++  func scene(
++    _ scene: UIScene,
++    willConnectTo session: UISceneSession,
++    options connectionOptions: UIScene.ConnectionOptions
++  ) {
++    guard let windowScene = scene as? UIWindowScene,
++          let appDelegate,
++          let factory = appDelegate.reactNativeFactory else {
++      return
++    }
++
++    let sceneWindow = UIWindow(windowScene: windowScene)
++    window = sceneWindow
++    appDelegate.window = sceneWindow
++
++    // React Native reads cold-start links and quick actions from launch options.
++    var options = appDelegate.launchOptions ?? [:]
++    if let context = connectionOptions.urlContexts.first {
++      options[.url] = context.url
++      options[.sourceApplication] = context.options.sourceApplication
++      options[.annotation] = context.options.annotation
++    }
++    if let activity = connectionOptions.userActivities.first(where: {
++      $0.activityType == NSUserActivityTypeBrowsingWeb
++    }) {
++      options[.userActivityDictionary] = [
++        UIApplication.LaunchOptionsKey.userActivityType.rawValue: activity.activityType,
++        "UIApplicationLaunchOptionsUserActivityKey": activity,
++      ]
++    }
++    if let shortcut = connectionOptions.shortcutItem {
++      options[.shortcutItem] = shortcut
++    }
++    if let response = connectionOptions.notificationResponse,
++       response.notification.request.trigger is UNPushNotificationTrigger {
++      options[.remoteNotification] = response.notification.request.content.userInfo
++    }
++    factory.startReactNative(withModuleName: "main", in: sceneWindow, launchOptions: options)
++  }
++
++  func sceneDidBecomeActive(_ scene: UIScene) {
++    appDelegate?.applicationDidBecomeActive(UIApplication.shared)
++  }
++
++  func sceneWillResignActive(_ scene: UIScene) {
++    appDelegate?.applicationWillResignActive(UIApplication.shared)
++  }
++
++  func sceneWillEnterForeground(_ scene: UIScene) {
++    appDelegate?.applicationWillEnterForeground(UIApplication.shared)
++  }
++
++  func sceneDidEnterBackground(_ scene: UIScene) {
++    appDelegate?.applicationDidEnterBackground(UIApplication.shared)
++  }
++
++  func scene(_ scene: UIScene, openURLContexts contexts: Set<UIOpenURLContext>) {
++    for context in contexts {
++      var options: [UIApplication.OpenURLOptionsKey: Any] = [.openInPlace: context.options.openInPlace]
++      options[.sourceApplication] = context.options.sourceApplication
++      options[.annotation] = context.options.annotation
++      _ = appDelegate?.application(UIApplication.shared, open: context.url, options: options)
++    }
++  }
++
++  func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
++    _ = appDelegate?.application(UIApplication.shared, continue: userActivity, restorationHandler: { _ in })
++  }
++
++  func windowScene(
++    _ windowScene: UIWindowScene,
++    performActionFor shortcutItem: UIApplicationShortcutItem,
++    completionHandler: @escaping (Bool) -> Void
++  ) {
++    appDelegate?.application(UIApplication.shared, performActionFor: shortcutItem, completionHandler: completionHandler)
++  }
++}
++
+ class ReactNativeDelegate: ExpoReactNativeFactoryDelegate {
+   // Extension point for config-plugins
+  
+diff --git a/packages/app-mobile/ios/Joplin/Info.plist b/packages/app-mobile/ios/Joplin/Info.plist
+index d9d4aef..6b5eff2 100644
+--- a/packages/app-mobile/ios/Joplin/Info.plist
++++ b/packages/app-mobile/ios/Joplin/Info.plist
+@@ -79,6 +79,23 @@
+ 	<string>To allow attaching images to a note</string>
+ 	<key>RCTNewArchEnabled</key>
+ 	<true/>
++	<key>UIApplicationSceneManifest</key>
++	<dict>
++		<key>UIApplicationSupportsMultipleScenes</key>
++		<false/>
++		<key>UISceneConfigurations</key>
++		<dict>
++			<key>UIWindowSceneSessionRoleApplication</key>
++			<array>
++				<dict>
++					<key>UISceneConfigurationName</key>
++					<string>Default Configuration</string>
++					<key>UISceneDelegateClassName</key>
++					<string>JoplinSceneDelegate</string>
++				</dict>
++			</array>
++		</dict>
++	</dict>
+ 	<key>UIAppFonts</key>
+ 	<array>
+ 		<string>AntDesign.ttf</string>
+diff --git a/packages/app-mobile/tools/podInstall.js b/packages/app-mobile/tools/podInstall.js
+index 3f5bb24..3baba2c 100644
+--- a/packages/app-mobile/tools/podInstall.js
++++ b/packages/app-mobile/tools/podInstall.js
+@@ -1,20 +1,7 @@
+ const execa = require('execa');
+ 
+ module.exports = async function() {
+-	if (process.platform !== 'darwin') return Promise.resolve();
+-
+-	// 2024-10-11: Seems running `pod install` is not so slow anymore, and at least not the
+-	// bottleneck when running `yarn install` so we should run it every time.
+-
+-	// if (!process.env.RUN_POD_INSTALL) {
+-	// 	// We almost never need to run `pod install` either because it has
+-	// 	// already been done, or because we are not building the iOS app, yet
+-	// 	// it's taking most of the build time (3 min out of the 5 min needed to
+-	// 	// build the entire monorepo). If it needs to be ran, XCode will tell us
+-	// 	// anyway.
+-	// 	console.warn('**Not** running `pod install` - set `RUN_POD_INSTALL` to `1` to do so');
+-	// 	return Promise.resolve();
+-	// }
++	if (process.platform !== 'darwin' || process.env.RUN_POD_INSTALL !== '1') return Promise.resolve();
+ 
+ 	try {
+ 		const promise = execa('pod', ['install'], { cwd: `${__dirname}/../ios` });
