@@ -67,6 +67,38 @@ index 910f322..d542d09 100644
  			XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "Apple Development"
  			XCODE_ATTRIBUTE_CODE_SIGN_STYLE "Automatic"
  			XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS YES
+diff --git a/ios/ViewController.mm b/ios/ViewController.mm
+index ec3b169..79baea8 100644
+--- a/ios/ViewController.mm
++++ b/ios/ViewController.mm
+@@ -382,6 +382,11 @@ - (void)viewWillTransitionToSize:(CGSize)size
+ 		NSLog(@"Rotating to size: %@", NSStringFromCGSize(size));
+ 	} completion:^(id<UIViewControllerTransitionCoordinatorContext> context) {
+ 		NSLog(@"Rotation finished");
++		UIWindowScene *scene = self.view.window.windowScene;
++		if (!scene || scene.activationState != UISceneActivationStateForegroundActive || !renderLoopRunning) {
++			// didBecomeActive updates the size and resumes rendering after background snapshots.
++			return;
++		}
+ 		// Reinitialize graphics context to match new size
+ 		[self requestExitGLRenderLoop];
+ 		[self updateResolutionWithView:self.view];
+diff --git a/ios/ViewControllerMetal.mm b/ios/ViewControllerMetal.mm
+index 70382a2..ed005f1 100644
+--- a/ios/ViewControllerMetal.mm
++++ b/ios/ViewControllerMetal.mm
+@@ -412,6 +412,11 @@ - (void)viewWillTransitionToSize:(CGSize)size
+ 		NSLog(@"Rotating to size: %@", NSStringFromCGSize(size));
+ 	} completion:^(id<UIViewControllerTransitionCoordinatorContext> context) {
+ 		NSLog(@"Rotation finished");
++		UIWindowScene *scene = self.view.window.windowScene;
++		if (!scene || scene.activationState != UISceneActivationStateForegroundActive || !renderLoopRunning) {
++			// didBecomeActive updates the size and resumes rendering after background snapshots.
++			return;
++		}
+ 		// Reinitialize graphics context to match new size
+ 		[self requestExitVulkanRenderLoop];
+ 		[self updateResolutionWithView:self.view];
 diff --git a/ios/main.mm b/ios/main.mm
 index 3b9f574..c60debc 100644
 --- a/ios/main.mm
