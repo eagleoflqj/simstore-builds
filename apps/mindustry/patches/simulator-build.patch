@@ -1,0 +1,53 @@
+diff --git a/gradle/wrapper/gradle-wrapper.properties b/gradle/wrapper/gradle-wrapper.properties
+index 2f2958b..0ab0c6a 100644
+--- a/gradle/wrapper/gradle-wrapper.properties
++++ b/gradle/wrapper/gradle-wrapper.properties
+@@ -1,5 +1,6 @@
+ distributionBase=GRADLE_USER_HOME
+ distributionPath=wrapper/dists
+ distributionUrl=https\://services.gradle.org/distributions/gradle-9.3.1-bin.zip
++distributionSha256Sum=b266d5ff6b90eada6dc3b20cb090e3731302e553a27c5d3e4df1f0d76beaff06
+ zipStoreBase=GRADLE_USER_HOME
+ zipStorePath=wrapper/dists
+diff --git a/ios/Info.plist.xml b/ios/Info.plist.xml
+index d55a48f..dfc73cf 100644
+--- a/ios/Info.plist.xml
++++ b/ios/Info.plist.xml
+@@ -18,6 +18,11 @@
+         <string>${app.name}</string>
+         <key>CFBundlePackageType</key>
+         <string>APPL</string>
++        <key>UIApplicationSceneManifest</key>
++        <dict>
++            <key>UIApplicationSupportsMultipleScenes</key>
++            <false/>
++        </dict>
+         <key>CFBundleShortVersionString</key>
+         <string>${app.version}</string>
+         <key>UILaunchStoryboardName</key>
+diff --git a/ios/build.gradle b/ios/build.gradle
+index b1d9820..86b0dc7 100644
+--- a/ios/build.gradle
++++ b/ios/build.gradle
+@@ -35,7 +35,8 @@ task incrementConfig{
+ dependencies{
+     implementation project(":core")
+ 
+-    implementation arcModule("natives:natives-freetype-ios")
++    implementation files("../../Arc/arc-core/build/natives/arc-natives-ios.jar",
++        "../../Arc/extensions/freetype/build/natives/arc-freetype-natives-ios.jar")
+     implementation arcModule("backends:backend-robovm")
+ 
+     compileOnly project(":annotations")
+diff --git a/ios/robovm.xml b/ios/robovm.xml
+index ea33492..1c0c780 100644
+--- a/ios/robovm.xml
++++ b/ios/robovm.xml
+@@ -35,7 +35,6 @@
+     </forceLinkClasses>
+     <libs>
+         <lib>z</lib>
+-        <lib>libs/libarc-freetype.a</lib>
+     </libs>
+     <frameworks>
+         <framework>arc</framework>
