@@ -118,3 +118,10 @@ jobs:
           tag=$(jq -er --arg id "$PROJECT_ID" '.apps[0] | select(.id == $id) | .id + "/" + .versions[0].version' release/index.json)
           gh release create "$tag" "release/$PROJECT_ID.app.tar.bz2" release/index.json release/icon.png \
             --target "$GITHUB_SHA" --title "$tag" --notes "arm64 iOS Simulator build" --latest=false
+
+  update-catalog:
+    needs: publish
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/update-index.yml

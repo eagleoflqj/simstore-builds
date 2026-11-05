@@ -1,0 +1,12 @@
+id: joplin
+name: Joplin
+
+source:
+  license: AGPL-3.0-or-later
+  repository: https://github.com/laurent22/joplin
+  version: 13.7.6
+  revision: fdd4005528b8c65855b69dbb591df49c43e54b22
+
+build:
+  script: build.sh
+  deploymentTarget: "15.6"
