@@ -67,3 +67,19 @@ index 910f322..d542d09 100644
  			XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "Apple Development"
  			XCODE_ATTRIBUTE_CODE_SIGN_STYLE "Automatic"
  			XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS YES
+diff --git a/ios/main.mm b/ios/main.mm
+index 3b9f574..c60debc 100644
+--- a/ios/main.mm
++++ b/ios/main.mm
+@@ -647,6 +647,11 @@ void System_Vibrate(int mode) {
+ }
+ 
+ int main(int argc, char *argv[]) {
++#if PPSSPP_PLATFORM(IOS_SIMULATOR)
++	// Allow MoltenVK to emulate texture swizzles in shaders on Simulator.
++	setenv("MVK_CONFIG_FULL_IMAGE_VIEW_SWIZZLE", "1", 1);
++#endif
++
+ 	version = [[[UIDevice currentDevice] systemVersion] UTF8String];
+ 	if (1 != sscanf(version.c_str(), "%d", &g_iosVersionMajor)) {
+ 		// Just set it to 14.0 if the parsing fails for whatever reason.
