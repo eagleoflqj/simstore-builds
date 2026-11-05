@@ -22,7 +22,8 @@ fi
 [[ $(node --version) == "v$NODE_VERSION" && $(pnpm --version) == "$PNPM_VERSION" ]]
 node --version
 pnpm --version
-checkout_clean "$(manifest_field source.repository)" "$(manifest_field source.revision)" "$source_dir"
+checkout_patched "$(manifest_field source.repository)" "$(manifest_field source.revision)" \
+  "$source_dir" "$app_dir/patches/simulator-build.patch"
 python3 - "$source_dir" "$NODE_VERSION" "$PNPM_VERSION" <<'PY'
 import json
 from pathlib import Path

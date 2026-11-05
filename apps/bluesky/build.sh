@@ -9,5 +9,6 @@ xcodebuild -workspace ios/Bluesky.xcworkspace -scheme Bluesky -configuration Rel
   CODE_SIGN_STYLE=Manual PROVISIONING_PROFILE= PROVISIONING_PROFILE_SPECIFIER= \
   CURRENT_PROJECT_VERSION=1 ENABLE_USER_SCRIPT_SANDBOXING=NO \
   build 2>&1 | tee "$work/logs/xcode-release.log"
-git diff --exit-code
+git diff > "$work/source.patch"
+cmp "$app_dir/patches/simulator-build.patch" "$work/source.patch"
 finish_build "$work/derived-data/Build/Products/Release-iphonesimulator/Bluesky.app" Bluesky.app
