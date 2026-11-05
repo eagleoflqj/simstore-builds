@@ -1,4 +1,4 @@
-"""Export a primary PNG icon from a built iOS app without modifying its bundle."""
+"""Export an app's primary icon as PNG without modifying its bundle."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -7,6 +7,9 @@ import re
 import tempfile
 
 from validate import run
+
+
+ICON_EXTENSIONS = ('.png', '.tiff', '.tif', '.icns', '.jpg', '.jpeg', '.heic', '.webp', '.gif', '.bmp', '.ico')
 
 
 def icon_names(info: dict[str, object]) -> list[str]:
@@ -48,8 +51,13 @@ def primary_icon(app: Path) -> Path:
         relative = Path(name)
         if relative.is_absolute() or '..' in relative.parts:
             raise ValueError(f'Icon path escapes the App Bundle: {name}')
-        stem = relative.name[:-4] if relative.name.lower().endswith('.png') else relative.name
-        pattern = re.compile(re.escape(stem) + r'(?:@\d+x)?(?:~(?:iphone|ipad))?\.png', re.IGNORECASE)
+        if relative.suffix.lower() in ICON_EXTENSIONS:
+            stem = relative.stem
+            extension = re.escape(relative.suffix)
+        else:
+            stem = relative.name
+            extension = '(?:' + '|'.join(re.escape(suffix) for suffix in ICON_EXTENSIONS) + ')'
+        pattern = re.compile(re.escape(stem) + r'(?:@\d+x)?(?:~(?:iphone|ipad))?' + extension, re.IGNORECASE)
         parent = app / relative.parent
         if not parent.is_dir():
             continue
@@ -60,7 +68,9 @@ def primary_icon(app: Path) -> Path:
                 raise ValueError(f'Icon path escapes the App Bundle: {path}')
             candidates.add(path)
     if not candidates:
-        raise ValueError('No primary PNG icon found in the App Bundle; Assets.car-only icons are not supported')
+        raise ValueError('No primary icon image found in the App Bundle; Assets.car-only icons are not supported')
+    png_candidates = {path for path in candidates if path.suffix.lower() == '.png'}
+    candidates = png_candidates or candidates
     dimensions = {path: image_size(path) for path in candidates}
     return max(candidates, key=lambda path: (dimensions[path][0] * dimensions[path][1], path.name))
 

@@ -74,10 +74,38 @@ class IconTests(unittest.TestCase):
         self.assertEqual(before, {path.name: hashlib.sha256(path.read_bytes()).hexdigest()
                                   for path in self.app.iterdir()})
 
+    def test_non_png_icons_are_encoded_as_png(self) -> None:
+        seed = self.root / 'Seed.png'
+        write_png(seed, 512)
+        for format_name, suffix in [('tiff', '.tiff'), ('jpeg', '.jpg'), ('icns', '.icns'), ('tiff', '.png')]:
+            with self.subTest(format=format_name, suffix=suffix):
+                source = self.app / f'Primary-{format_name}{suffix}'
+                subprocess.run(['sips', '-s', 'format', format_name, str(seed), '--out', str(source)],
+                               check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+                self.info = {'CFBundleIconFiles': [source.name]}
+                self.write_info()
+                before = hashlib.sha256(source.read_bytes()).hexdigest()
+                output = self.root / 'artifacts' / 'icon.png'
+                self.assertEqual(primary_icon(self.app), source)
+                export_icon(self.app, output)
+                self.assertTrue(output.read_bytes().startswith(b'\x89PNG\r\n\x1a\n'))
+                self.assertEqual(image_size(output), (512, 512))
+                self.assertEqual(hashlib.sha256(source.read_bytes()).hexdigest(), before)
+
+    def test_primary_png_is_preferred_to_other_formats(self) -> None:
+        write_png(self.app / 'Phone.png', 24)
+        seed = self.root / 'Seed.png'
+        write_png(seed, 48)
+        subprocess.run(['sips', '-s', 'format', 'tiff', str(seed), '--out', str(self.app / 'Fallback.tiff')],
+                       check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        self.info = {'CFBundleIconFiles': ['Phone.png', 'Fallback.tiff']}
+        self.write_info()
+        self.assertEqual(primary_icon(self.app), self.app / 'Phone.png')
+
     def test_missing_primary_png_does_not_select_an_unrelated_image(self) -> None:
         write_png(self.app / 'Other.png', 24)
         (self.app / 'Assets.car').write_bytes(b'asset catalog')
-        with self.assertRaisesRegex(ValueError, 'No primary PNG icon'):
+        with self.assertRaisesRegex(ValueError, 'No primary icon image'):
             export_icon(self.app, self.root / 'artifacts/icon.png')
         self.assertFalse((self.root / 'artifacts').exists())
 

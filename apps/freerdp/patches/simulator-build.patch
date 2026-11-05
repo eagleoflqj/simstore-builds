@@ -1,0 +1,76 @@
+diff --git a/client/iOS/CMakeLists.txt b/client/iOS/CMakeLists.txt
+index 9064677..2aeb6ea 100644
+--- a/client/iOS/CMakeLists.txt
++++ b/client/iOS/CMakeLists.txt
+@@ -284,7 +284,7 @@ set_source_files_properties(${RESOURCES} PROPERTIES MACOSX_PACKAGE_LOCATION "Res
+ set_source_files_properties(
+   ${IOS_CLIENT_RESOURCES_ABOUT_PAGE} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/about_page"
+ )
+-set_source_files_properties(${IOS_CLIENT_RESOURCES_LOCALE} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/en.lproj")
++set_source_files_properties(${IOS_CLIENT_RESOURCES_LOCALE} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
+ 
+ string(TIMESTAMP VERSION_YEAR "%Y")
+ 
+@@ -344,6 +344,7 @@ set_target_properties(
+              BUILD_RPATH "@executable_path/Frameworks"
+              INSTALL_RPATH "@executable_path/Frameworks"
+              XCODE_EMBED_FRAMEWORKS_CODE_SIGN_ON_COPY ON
++             XCODE_ATTRIBUTE_COMBINE_HIDPI_IMAGES NO
+ )
+ target_compile_options(${PROJECT_NAME} PRIVATE -fno-objc-arc)
+ 
+diff --git a/client/iOS/cmake/ExternalFFmpeg.cmake b/client/iOS/cmake/ExternalFFmpeg.cmake
+index b6dd1ea..6102f60 100644
+--- a/client/iOS/cmake/ExternalFFmpeg.cmake
++++ b/client/iOS/cmake/ExternalFFmpeg.cmake
+@@ -43,6 +43,6 @@ ExternalProject_Add(
+     --enable-swresample --enable-avcodec --enable-avutil --enable-decoder=h264 --enable-parser=h264
+     --enable-decoder=hevc --enable-parser=hevc --enable-videotoolbox --enable-hwaccel=h264_videotoolbox
+     --enable-hwaccel=hevc_videotoolbox --libdir=${DEPS_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR}
+-  BUILD_COMMAND make -j
+-  INSTALL_COMMAND make -j install
++  BUILD_COMMAND make -j$ENV{CMAKE_BUILD_PARALLEL_LEVEL}
++  INSTALL_COMMAND make -j$ENV{CMAKE_BUILD_PARALLEL_LEVEL} install
+ )
+diff --git a/client/iOS/cmake/ExternalOpenH264.cmake b/client/iOS/cmake/ExternalOpenH264.cmake
+index d360b69..22a4e0e 100644
+--- a/client/iOS/cmake/ExternalOpenH264.cmake
++++ b/client/iOS/cmake/ExternalOpenH264.cmake
+@@ -1,11 +1,20 @@
+ include(ExternalProject)
+ include(DepVersions)
+ 
+-set(IOS_FLAGS "ENABLEPIC=Yes OS=ios ARCH=arm64 SDK_MIN=${CMAKE_OSX_DEPLOYMENT_TARGET}")
++set(IOS_FLAGS ENABLEPIC=Yes OS=ios ARCH=arm64 SDK_MIN=${CMAKE_OSX_DEPLOYMENT_TARGET})
++if(PLATFORM MATCHES "SIMULATOR")
++  list(APPEND IOS_FLAGS SDKTYPE=iPhoneSimulator
++       "CC=${CMAKE_C_COMPILER} -target arm64-apple-ios${CMAKE_OSX_DEPLOYMENT_TARGET}-simulator"
++       "CXX=${CMAKE_CXX_COMPILER} -target arm64-apple-ios${CMAKE_OSX_DEPLOYMENT_TARGET}-simulator")
++endif()
++
+ ExternalProject_Add(
+-  openh264 DOWNLOAD_EXTRACT_TIMESTAMP OFF GIT_REPOSITORY https://github.com/cisco/openh264.git GIT_TAG ${OPENH264_TAG}
+-  GIT_SHALLOW TRUE CONFIGURE_COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different <SOURCE_DIR> <BINARY_DIR>
+-  BUILD_COMMAND make ${IOS_FLAGS} LDFLAGS=-static-libstdc++ -j libraries
++  openh264 DOWNLOAD_EXTRACT_TIMESTAMP OFF
++  URL https://github.com/cisco/openh264/archive/${OPENH264_REVISION}.tar.gz
++  URL_HASH SHA256=${OPENH264_SHA256}
++  CONFIGURE_COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different <SOURCE_DIR> <BINARY_DIR>
++  BUILD_COMMAND make ${IOS_FLAGS} -j$ENV{CMAKE_BUILD_PARALLEL_LEVEL} libraries
+   INSTALL_COMMAND make ${IOS_FLAGS} PREFIX=${DEPS_INSTALL_DIR} LIBDIR_NAME=${CMAKE_INSTALL_LIBDIR}
+-                  SHAREDLIB_DIR=${DEPS_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR} -j install
++                  SHAREDLIB_DIR=${DEPS_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR}
++                  -j$ENV{CMAKE_BUILD_PARALLEL_LEVEL} install
+ )
+diff --git a/client/iOS/cmake/ExternalOpenSSL.cmake b/client/iOS/cmake/ExternalOpenSSL.cmake
+index 4970407..0a3da9a 100644
+--- a/client/iOS/cmake/ExternalOpenSSL.cmake
++++ b/client/iOS/cmake/ExternalOpenSSL.cmake
+@@ -45,6 +45,6 @@ ExternalProject_Add(
+   URL_HASH ${OPENSSL_HASH}
+   CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env ${_ossl_env} perl <SOURCE_DIR>/Configure ${_ossl_config_args} ${ARGS}
+                     no-tests no-apps no-docs --prefix=${DEPS_INSTALL_DIR} --libdir=${CMAKE_INSTALL_LIBDIR}
+-  BUILD_COMMAND ${CMAKE_COMMAND} -E env ${_ossl_env} make -j build_sw
++  BUILD_COMMAND ${CMAKE_COMMAND} -E env ${_ossl_env} make -j$ENV{CMAKE_BUILD_PARALLEL_LEVEL} build_sw
+   INSTALL_COMMAND ${CMAKE_COMMAND} -E env ${_ossl_env} make install_sw
+ )
