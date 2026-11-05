@@ -1,0 +1,12 @@
+id: organic-maps
+name: Organic Maps
+
+source:
+  license: Apache-2.0
+  repository: https://github.com/organicmaps/organicmaps
+  version: 2026.9.29
+  revision: b20d1417eef1e3c63a447ac8658db4307a066024
+
+build:
+  script: build.sh
+  deploymentTarget: "16.2"
