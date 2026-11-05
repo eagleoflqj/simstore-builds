@@ -1,0 +1,12 @@
+id: logseq
+name: Logseq
+
+source:
+  license: AGPL-3.0-only
+  repository: https://github.com/logseq/logseq
+  version: 2.0.2
+  revision: 533ac4382a7b69baa98de3a973bff90305b212dc
+
+build:
+  script: build.sh
+  deploymentTarget: "26.0"
