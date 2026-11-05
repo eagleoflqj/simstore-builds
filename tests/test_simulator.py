@@ -102,6 +102,32 @@ class SimulatorTests(unittest.TestCase):
             finally:
                 process.terminate()
 
+    def test_launch_deadline_allows_four_minutes_but_rejects_more_than_five(self) -> None:
+        with subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)']) as process:
+            try:
+                for duration, expected in ((240, 0), (301, 1)):
+                    with self.subTest(duration=duration):
+                        def run_simctl(command: list[str], *, check: bool, timeout: int,
+                                       stdout: int | None = None, text: bool = False) -> subprocess.CompletedProcess[str]:
+                            if command[2] == 'launch' and duration > timeout:
+                                raise subprocess.TimeoutExpired(command, timeout)
+                            return subprocess.CompletedProcess(command, 0, stdout=f'org.simstore.example: {process.pid}\n')
+
+                        with patch('simulator.validate', return_value=({'CFBundleIdentifier': 'org.simstore.example'}, [], (17, 0, 0))), \
+                             patch('simulator.subprocess.run', side_effect=run_simctl), \
+                             patch('simulator.sleep') as sleep, \
+                             patch('sys.argv', ['simulator.py', str(self.app), 'booted']), \
+                             patch('sys.stdout', new_callable=io.StringIO), \
+                             patch('sys.stderr', new_callable=io.StringIO) as stderr:
+                            self.assertEqual(main(), expected)
+                            if expected == 0:
+                                sleep.assert_called_once_with(30)
+                            else:
+                                sleep.assert_not_called()
+                                self.assertIn('timed out', stderr.getvalue())
+            finally:
+                process.terminate()
+
     def test_manifest_minimum_is_honored_before_booting(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             app = Path(temporary) / 'Example.app'

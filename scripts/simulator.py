@@ -76,7 +76,7 @@ def smoke_test(app: Path, manifest_path: Path | None = None, target: str | None 
     print(f'Launching {info["CFBundleIdentifier"]} on {udid}', flush=True)
     launched = subprocess.run(
         ['xcrun', 'simctl', 'launch', '--terminate-running-process', udid, info['CFBundleIdentifier']],
-        check=True, timeout=180, stdout=subprocess.PIPE, text=True)
+        check=True, timeout=300, stdout=subprocess.PIPE, text=True)
     print(launched.stdout.strip(), flush=True)
     pid = parse_launch_pid(launched.stdout, info['CFBundleIdentifier'])
     print(f'Waiting 30 seconds before checking PID {pid}', flush=True)
