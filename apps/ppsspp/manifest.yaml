@@ -1,0 +1,12 @@
+id: ppsspp
+name: PPSSPP
+
+source:
+  license: GPL-2.0-or-later
+  repository: https://github.com/hrydgard/ppsspp
+  version: 1.20.4
+  revision: fa50bb1976065c4f8b1b47af227d367fe9771555
+
+build:
+  script: build.sh
+  deploymentTarget: "15.0"
