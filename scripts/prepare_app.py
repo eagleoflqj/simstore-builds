@@ -56,7 +56,7 @@ def prepare(app: str | Path, strip_symbols: bool = False) -> None:
                 raise ValueError(f'Strip changed global defined symbols or dyld exports: {relative}')
             print(f'Stripped {relative}: {before} -> {path.stat().st_size} bytes')
         validate(app)
-    bundles = sorted([*app.rglob('*.framework'), *app.rglob('*.appex')],
+    bundles = sorted([*app.rglob('*.framework'), *app.rglob('*.appex'), *app.rglob('*.app')],
                      key=lambda p: len(p.parts), reverse=True)
     # Embedded Simulator entitlements survive thinning; preserve signing metadata too.
     for path in [*(app / binary for binary in binaries), *bundles, app]:

@@ -1,0 +1,12 @@
+id: bluesky
+name: Bluesky
+
+source:
+  license: MIT
+  repository: https://github.com/bluesky-social/social-app
+  version: v1.137.0
+  revision: 96262a98f6eb751f50a25625ef4d2a8ac5ede626
+
+build:
+  script: build.sh
+  deploymentTarget: "16.4"

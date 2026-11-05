@@ -113,6 +113,40 @@ class BundleTests(unittest.TestCase):
         self.assertEqual(binary.read_bytes(), original)
         validator.validate(output)
 
+    def test_prepare_resigns_app_clip_after_nested_framework(self) -> None:
+        clip = self.app / 'AppClips' / 'FixtureClip.app'
+        framework = clip / 'Frameworks' / 'Nested.framework'
+        framework.mkdir(parents=True)
+        shutil.copy2(self.base / 'simulator', clip / 'FixtureClip')
+        source = Path(self.work.name) / 'nested.c'
+        source.write_text('int exported_helper(void) { return 42; }\n')
+        library = Path(self.work.name) / 'Nested'
+        sdk = validator.run('xcrun', '--sdk', 'iphonesimulator', '--show-sdk-path')
+        subprocess.run(['xcrun', 'clang', '-g', '-dynamiclib', '-target',
+                        'arm64-apple-ios17.0-simulator', '-isysroot', sdk, str(source),
+                        '-install_name', '@rpath/Nested.framework/Nested', '-o', str(library)],
+                       check=True, capture_output=True)
+        shutil.copy2(library, framework / 'Nested')
+        for bundle, executable, identifier, kind in (
+            (clip, 'FixtureClip', 'org.simstore.fixture.Clip', 'APPL'),
+            (framework, 'Nested', 'org.simstore.fixture.Clip.Nested', 'FMWK'),
+        ):
+            info = dict(self.info, CFBundleExecutable=executable,
+                        CFBundleIdentifier=identifier, CFBundlePackageType=kind)
+            (bundle / 'Info.plist').write_bytes(plistlib.dumps(info))
+            (bundle / 'resource.txt').write_text('Preserved nested resource.\n')
+        for bundle in (framework, clip, self.app):
+            validator.run('codesign', '--force', '--sign', '-', '--timestamp=none', str(bundle))
+            validator.run('codesign', '--verify', '--deep', '--strict', str(bundle))
+
+        prepare(self.app, strip_symbols=True)
+
+        # The outer envelope can validate while an inner app's resource seal is stale.
+        for bundle in (framework, clip, self.app):
+            validator.run('codesign', '--verify', '--deep', '--strict', str(bundle))
+        self.assertEqual((clip / 'resource.txt').read_text(), 'Preserved nested resource.\n')
+        self.assertEqual((framework / 'resource.txt').read_text(), 'Preserved nested resource.\n')
+
     def test_validation_without_manifest_needs_only_stdlib(self) -> None:
         result = subprocess.run([sys.executable, '-S', str(SCRIPTS / 'validate.py'), str(self.app)],
                                 capture_output=True, text=True)
