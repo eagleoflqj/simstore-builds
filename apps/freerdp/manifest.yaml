@@ -1,0 +1,12 @@
+id: freerdp
+name: FreeRDP
+
+source:
+  license: Apache-2.0
+  repository: https://github.com/FreeRDP/FreeRDP
+  version: 3.33.0
+  revision: 5a10d7b6b79a2fbc62e8eba77085cd356dc303a6
+
+build:
+  script: build.sh
+  deploymentTarget: "15.0"
