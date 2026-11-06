@@ -1,0 +1,78 @@
+diff --git a/OnionBrowser.xcodeproj/project.pbxproj b/OnionBrowser.xcodeproj/project.pbxproj
+index 38d5f29..fd7c8d9 100644
+--- a/OnionBrowser.xcodeproj/project.pbxproj
++++ b/OnionBrowser.xcodeproj/project.pbxproj
+@@ -1155,7 +1155,7 @@
+ 			);
+ 			runOnlyForDeploymentPostprocessing = 0;
+ 			shellPath = /bin/sh;
+-			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\nbuild-util/update-blocklist.sh\n";
++			shellScript = "test -s \"$SRCROOT/Resources/light-onlydomains.txt\"\n";
+ 		};
+ 		A06F5F4A275692870023622E /* BartyCrouch */ = {
+ 			isa = PBXShellScriptBuildPhase;
+@@ -1174,7 +1174,7 @@
+ 			);
+ 			runOnlyForDeploymentPostprocessing = 0;
+ 			shellPath = /bin/sh;
+-			shellScript = "if [ -f /opt/homebrew/bin/bartycrouch ]; then\n    /opt/homebrew/bin/bartycrouch update -x\n    /opt/homebrew/bin/bartycrouch lint -x\nelse\n    echo \"warning: BartyCrouch not installed. Download it form https://github.com/Flinesoft/BartyCrouch\"\nfi\n";
++			shellScript = "# Use the translations from the pinned release.\n";
+ 		};
+ 		A0D8469F3093C0BD007886E8 /* Load GeoIP files */ = {
+ 			isa = PBXShellScriptBuildPhase;
+@@ -1193,7 +1193,7 @@
+ 			);
+ 			runOnlyForDeploymentPostprocessing = 0;
+ 			shellPath = /bin/sh;
+-			shellScript = "#!/bin/sh\n\nDEST=\"$PROJECT_DIR/Resources\"\n\nmkdir -p \"$DEST\"\ncd \"$DEST\"\n\n# Test if file is older then 1 week.\nOLD=\"$(find geoip -mmin +10080 2>/dev/null)\"\n\n# Only download, if files are not existing or older than 1 week.\nif [ ! -f geoip -o ! -z \"$OLD\" ]; then\n    curl --remote-name --location https://gitlab.torproject.org/tpo/core/tor/-/raw/main/src/config/geoip\n    curl --remote-name --location https://gitlab.torproject.org/tpo/core/tor/-/raw/main/src/config/geoip6\nfi\n";
++			shellScript = "test -s \"$SRCROOT/Resources/geoip\" && test -s \"$SRCROOT/Resources/geoip6\"\n";
+ 		};
+ 		C8C76E728A4BA9CC9C2E5513 /* [CP] Check Pods Manifest.lock */ = {
+ 			isa = PBXShellScriptBuildPhase;
+diff --git a/OnionBrowser.xcworkspace/xcshareddata/swiftpm/Package.resolved b/OnionBrowser.xcworkspace/xcshareddata/swiftpm/Package.resolved
+index 9697ea1..4523d83 100644
+--- a/OnionBrowser.xcworkspace/xcshareddata/swiftpm/Package.resolved
++++ b/OnionBrowser.xcworkspace/xcshareddata/swiftpm/Package.resolved
+@@ -51,7 +51,7 @@
+       "kind" : "remoteSourceControl",
+       "location" : "https://github.com/iCepa/Tor.framework",
+       "state" : {
+-        "revision" : "6bb8b0ce479040edbcc14d02095c3a334ad6b3b7",
++        "revision" : "9852bc7341ba039f4d5f941e4cb62a325e855091",
+         "version" : "409.15.2"
+       }
+     }
+diff --git a/Podfile b/Podfile
+index 1588ba5..c7dd757 100644
+--- a/Podfile
++++ b/Podfile
+@@ -4,7 +4,7 @@ platform :ios, '15.0'
+ 
+ #source 'https://cdn.cocoapods.org/'
+ #source 'https://cocoapods-cdn.netlify.app/'
+-source 'https://github.com/CocoaPods/Specs.git'
++source 'https://cdn.cocoapods.org/'
+ 
+ target 'OnionBrowser' do
+   pod 'DTFoundation/DTASN1'
+diff --git a/Podfile.lock b/Podfile.lock
+index 8daa13e..ac0ae3a 100644
+--- a/Podfile.lock
++++ b/Podfile.lock
+@@ -19,7 +19,7 @@ DEPENDENCIES:
+   - SwiftSoup (~> 2.7)
+ 
+ SPEC REPOS:
+-  https://github.com/CocoaPods/Specs.git:
++  trunk:
+     - DTFoundation
+     - MBProgressHUD
+     - OCMock
+@@ -45,6 +45,6 @@ SPEC CHECKSUMS:
+   SDCAlertView: c9042ba201897da46d833193b8462a186f79c47c
+   SwiftSoup: 959c9ac70d7053fbf476341bfac90ab228523f2a
+ 
+-PODFILE CHECKSUM: 13049bea201cd5f672b298213111e516c3d6631a
++PODFILE CHECKSUM: 1bbe2fe7bd0ca597c8227129749276d2227ead0b
+ 
+ COCOAPODS: 1.17.0
