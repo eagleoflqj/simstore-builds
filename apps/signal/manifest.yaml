@@ -1,0 +1,12 @@
+id: signal
+name: Signal
+
+source:
+  license: AGPL-3.0-only
+  repository: https://github.com/signalapp/Signal-iOS
+  version: v8.35.1
+  revision: 4f019b8ba2d10b924d68b4b294bfceb05bde2aa4
+
+build:
+  script: build.sh
+  deploymentTarget: "15.0"

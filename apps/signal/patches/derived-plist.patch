@@ -1,0 +1,90 @@
+diff --git a/Scripts/update_plist_info.sh b/Scripts/update_plist_info.sh
+index c6ffc60..e5e2d45 100755
+--- a/Scripts/update_plist_info.sh
++++ b/Scripts/update_plist_info.sh
+@@ -12,20 +12,26 @@ fi
+ cd $PROJECT_DIR
+ _git_commit_signal=`git log --pretty=oneline --decorate=no | head -1`
+ 
++# Stamp a generated input instead of modifying the checked-in source plist.
++: "${DERIVED_FILE_DIR:?Must be run by Xcode}"
++plist="${DERIVED_FILE_DIR}/Signal-Info.plist"
++mkdir -p "${DERIVED_FILE_DIR}"
++cp Signal/Signal-Info.plist "$plist"
++
+ # Remove existing .plist entry, if any.
+-/usr/libexec/PlistBuddy -c "Delete BuildDetails" Signal/Signal-Info.plist || true
++/usr/libexec/PlistBuddy -c "Delete BuildDetails" "$plist" || true
+ # Add new .plist entry.
+-/usr/libexec/PlistBuddy -c "add BuildDetails dict" Signal/Signal-Info.plist
++/usr/libexec/PlistBuddy -c "add BuildDetails dict" "$plist"
+ 
+ echo "CONFIGURATION: ${CONFIGURATION}"
+ if [ "${CONFIGURATION}" = "App Store Release" ]; then
+-    /usr/libexec/PlistBuddy -c "add :BuildDetails:XCodeVersion string '${XCODE_VERSION_MAJOR}.${XCODE_VERSION_MINOR}'" Signal/Signal-Info.plist
+-    /usr/libexec/PlistBuddy -c "add :BuildDetails:SignalCommit string '$_git_commit_signal'" Signal/Signal-Info.plist
++    /usr/libexec/PlistBuddy -c "add :BuildDetails:XCodeVersion string '${XCODE_VERSION_MAJOR}.${XCODE_VERSION_MINOR}'" "$plist"
++    /usr/libexec/PlistBuddy -c "add :BuildDetails:SignalCommit string '$_git_commit_signal'" "$plist"
+ 
+     # Use UTC
+     _build_datetime=`date -u`
+-    /usr/libexec/PlistBuddy -c "add :BuildDetails:DateTime string '$_build_datetime'" Signal/Signal-Info.plist
++    /usr/libexec/PlistBuddy -c "add :BuildDetails:DateTime string '$_build_datetime'" "$plist"
+ 
+     _build_timestamp=`date +%s`
+-    /usr/libexec/PlistBuddy -c "add :BuildDetails:Timestamp integer $_build_timestamp" Signal/Signal-Info.plist
++    /usr/libexec/PlistBuddy -c "add :BuildDetails:Timestamp integer $_build_timestamp" "$plist"
+ fi
+diff --git a/Signal.xcodeproj/project.pbxproj b/Signal.xcodeproj/project.pbxproj
+index 19dd9d7..04d0fd0 100644
+--- a/Signal.xcodeproj/project.pbxproj
++++ b/Signal.xcodeproj/project.pbxproj
+@@ -18261,10 +18261,11 @@
+ 			files = (
+ 			);
+ 			inputPaths = (
++				"$(PROJECT_DIR)/Signal/Signal-Info.plist",
+ 			);
+ 			name = "Run Script: update_plist_info";
+ 			outputPaths = (
+-				"$(PROJECT_DIR)/Signal/Signal-Info.plist",
++				"$(DERIVED_FILE_DIR)/Signal-Info.plist",
+ 			);
+ 			runOnlyForDeploymentPostprocessing = 0;
+ 			shellPath = /bin/sh;
+@@ -22409,7 +22410,7 @@
+ 				);
+ 				GCC_STRICT_ALIASING = NO;
+ 				"INCLUDED_SOURCE_FILE_NAMES[arch=*]" = "$(MAYBE_INPUT_VIDEO_PATH)";
+-				INFOPLIST_FILE = "$(SRCROOT)/Signal/Signal-Info.plist";
++				INFOPLIST_FILE = "$(DERIVED_FILE_DIR)/Signal-Info.plist";
+ 				LD_RUNPATH_SEARCH_PATHS = (
+ 					"$(inherited)",
+ 					"@executable_path/Frameworks",
+@@ -22670,7 +22671,7 @@
+ 					"RELEASE=1",
+ 				);
+ 				GCC_STRICT_ALIASING = NO;
+-				INFOPLIST_FILE = "$(SRCROOT)/Signal/Signal-Info.plist";
++				INFOPLIST_FILE = "$(DERIVED_FILE_DIR)/Signal-Info.plist";
+ 				LD_RUNPATH_SEARCH_PATHS = (
+ 					"$(inherited)",
+ 					"@executable_path/Frameworks",
+@@ -23041,7 +23042,7 @@
+ 					HAVE_CONFIG_H,
+ 				);
+ 				GCC_STRICT_ALIASING = NO;
+-				INFOPLIST_FILE = "$(SRCROOT)/Signal/Signal-Info.plist";
++				INFOPLIST_FILE = "$(DERIVED_FILE_DIR)/Signal-Info.plist";
+ 				LD_RUNPATH_SEARCH_PATHS = (
+ 					"$(inherited)",
+ 					"@executable_path/Frameworks",
+@@ -23081,7 +23082,7 @@
+ 					"RELEASE=1",
+ 				);
+ 				GCC_STRICT_ALIASING = NO;
+-				INFOPLIST_FILE = "$(SRCROOT)/Signal/Signal-Info.plist";
++				INFOPLIST_FILE = "$(DERIVED_FILE_DIR)/Signal-Info.plist";
+ 				LD_RUNPATH_SEARCH_PATHS = (
+ 					"$(inherited)",
+ 					"@executable_path/Frameworks",
