@@ -1,0 +1,118 @@
+diff --git a/ios/app/src/AppDelegate.swift b/ios/app/src/AppDelegate.swift
+index e9fe234..b7a1e9a 100644
+--- a/ios/app/src/AppDelegate.swift
++++ b/ios/app/src/AppDelegate.swift
+@@ -6,9 +6,10 @@ import JitsiMeetSDK
+ class AppDelegate: UIResponder, UIApplicationDelegate {
+ 
+     var window: UIWindow?
++    var launchOptions: [UIApplication.LaunchOptionsKey: Any]?
+ 
+     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+-        self.window = UIWindow(frame: UIScreen.main.bounds)
++        self.launchOptions = launchOptions
+ 
+         let jitsiMeet = JitsiMeet.sharedInstance()
+ 
+@@ -27,20 +28,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
+             builder.setFeatureFlag("ios.recording.enabled", withBoolean: true)
+         }
+ 
+-        jitsiMeet.application(application, didFinishLaunchingWithOptions: launchOptions ?? [:])
+-
+         if self.appContainsRealServiceInfoPlist() {
+             print("Enabling Firebase")
+             FirebaseApp.configure()
+             Crashlytics.crashlytics().setCrashlyticsCollectionEnabled(!jitsiMeet.isCrashReportingDisabled())
+         }
+ 
+-        let vc = ViewController()
+-        self.window?.rootViewController = vc
+-        jitsiMeet.showSplashScreen()
+-
+-        self.window?.makeKeyAndVisible()
+-
+         return true
+     }
+ 
+@@ -76,3 +69,52 @@ extension AppDelegate {
+         return InfoPlistUtil.containsRealServiceInfoPlist(in: Bundle.main)
+     }
+ }
++
++@objc(JitsiMeetSceneDelegate)
++class SceneDelegate: UIResponder, UIWindowSceneDelegate {
++    var window: UIWindow?
++
++    private var appDelegate: AppDelegate? {
++        UIApplication.shared.delegate as? AppDelegate
++    }
++
++    func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
++        guard let windowScene = scene as? UIWindowScene, let appDelegate else { return }
++
++        // The SDK reads cold-start conference links from the application launch options.
++        var options = appDelegate.launchOptions ?? [:]
++        if let context = connectionOptions.urlContexts.first {
++            options[.url] = context.url
++            options[.sourceApplication] = context.options.sourceApplication
++            options[.annotation] = context.options.annotation
++        }
++        if let activity = connectionOptions.userActivities.first {
++            options[.userActivityDictionary] = [
++                UIApplication.LaunchOptionsKey.userActivityType.rawValue: activity.activityType,
++                "UIApplicationLaunchOptionsUserActivityKey": activity
++            ]
++        }
++
++        let jitsiMeet = JitsiMeet.sharedInstance()
++        jitsiMeet.application(UIApplication.shared, didFinishLaunchingWithOptions: options)
++        let sceneWindow = UIWindow(windowScene: windowScene)
++        window = sceneWindow
++        appDelegate.window = sceneWindow
++        sceneWindow.rootViewController = ViewController()
++        jitsiMeet.showSplashScreen()
++        sceneWindow.makeKeyAndVisible()
++    }
++
++    func scene(_ scene: UIScene, openURLContexts contexts: Set<UIOpenURLContext>) {
++        for context in contexts {
++            var options: [UIApplication.OpenURLOptionsKey: Any] = [.openInPlace: context.options.openInPlace]
++            options[.sourceApplication] = context.options.sourceApplication
++            options[.annotation] = context.options.annotation
++            _ = appDelegate?.application(UIApplication.shared, open: context.url, options: options)
++        }
++    }
++
++    func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
++        _ = appDelegate?.application(UIApplication.shared, continue: userActivity, restorationHandler: { _ in })
++    }
++}
+diff --git a/ios/app/src/Info.plist b/ios/app/src/Info.plist
+index 72d4559..f11275a 100644
+--- a/ios/app/src/Info.plist
++++ b/ios/app/src/Info.plist
+@@ -82,6 +82,23 @@
+ 	<string>group.org.jitsi.meet.appgroup</string>
+ 	<key>RTCScreenSharingExtension</key>
+ 	<string>org.jitsi.meet.broadcast.extension</string>
++	<key>UIApplicationSceneManifest</key>
++	<dict>
++		<key>UIApplicationSupportsMultipleScenes</key>
++		<false/>
++		<key>UISceneConfigurations</key>
++		<dict>
++			<key>UIWindowSceneSessionRoleApplication</key>
++			<array>
++				<dict>
++					<key>UISceneConfigurationName</key>
++					<string>Default Configuration</string>
++					<key>UISceneDelegateClassName</key>
++					<string>JitsiMeetSceneDelegate</string>
++				</dict>
++			</array>
++		</dict>
++	</dict>
+ 	<key>UIBackgroundModes</key>
+ 	<array>
+ 		<string>audio</string>

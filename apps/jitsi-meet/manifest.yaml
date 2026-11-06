@@ -1,0 +1,12 @@
+id: jitsi-meet
+name: Jitsi Meet
+
+source:
+  license: Apache-2.0
+  repository: https://github.com/jitsi/jitsi-meet
+  version: 26.4.0
+  revision: 94ab99d6dcd381c30e8b91ececdff1ec605da8ea
+
+build:
+  script: build.sh
+  deploymentTarget: "15.1"
