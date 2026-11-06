@@ -7,8 +7,6 @@ import json
 from pathlib import Path
 import plistlib
 import re
-import shutil
-import subprocess
 from typing import Any
 
 
@@ -71,29 +69,6 @@ def prepare_bundle(app: Path) -> None:
         for key in ('CFBundleShortVersionString', 'CFBundleVersion'):
             metadata[key] = info[key]
         path.write_bytes(plistlib.dumps(metadata, sort_keys=False))
-    framework = app / 'Frameworks/Sentry.framework'
-    if framework.is_dir():
-        # Xcode embeds a codeless framework with an iOS 100 stub for this static SDK.
-        # Keep its privacy manifest as a resource bundle; Sentry's code is in the app.
-        stub = framework / 'Sentry'
-        symbols = subprocess.check_output(['xcrun', 'nm', '-arch', 'arm64', '-gUj', str(stub)], text=True)
-        if set(symbols.splitlines()) - {'__mh_dylib_header'}:
-            raise ValueError('Expected the codeless Sentry framework placeholder')
-        for bundle in (app, *app.rglob('*.appex')):
-            binary = bundle / plistlib.loads((bundle / 'Info.plist').read_bytes())['CFBundleExecutable']
-            dependencies = subprocess.check_output(['xcrun', 'otool', '-L', str(binary)], text=True)
-            if '@rpath/Sentry.framework/Sentry' in dependencies:
-                raise ValueError('Sentry must be linked statically before removing its placeholder')
-        resources = app / 'SentryResources.bundle'
-        if resources.exists():
-            shutil.rmtree(resources)
-        shutil.copytree(framework, resources, ignore=shutil.ignore_patterns('Sentry', '_CodeSignature'))
-        metadata = plistlib.loads((resources / 'Info.plist').read_bytes())
-        metadata.pop('CFBundleExecutable', None)
-        metadata.pop('MinimumOSVersion', None)
-        metadata['CFBundlePackageType'] = 'BNDL'
-        (resources / 'Info.plist').write_bytes(plistlib.dumps(metadata, sort_keys=False))
-        shutil.rmtree(framework)
 
 
 def main() -> None:

@@ -1,0 +1,12 @@
+id: open-food-facts
+name: Open Food Facts
+
+source:
+  license: Apache-2.0
+  repository: https://github.com/openfoodfacts/smooth-app
+  version: v4.24.0
+  revision: 803e08850746f6ac3d3ec7c73b1f246d04ce941a
+
+build:
+  script: build.sh
+  deploymentTarget: "16.0"

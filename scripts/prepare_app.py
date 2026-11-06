@@ -5,16 +5,46 @@ from __future__ import annotations
 import argparse
 import os
 from pathlib import Path
+import plistlib
+import shutil
 import stat
 import tempfile
 
 from validate import MACH_MAGICS, run, validate
 
 
+def preserve_sentry_resources(app: Path, binaries: list[Path]) -> None:
+    """Retain static Sentry's privacy resources without Xcode's iOS 100 placeholder."""
+    framework = app / 'Frameworks/Sentry.framework'
+    if not framework.is_dir():
+        return
+    metadata = plistlib.loads((framework / 'Info.plist').read_bytes())
+    if metadata.get('MinimumOSVersion') != '100.0':
+        return
+    stub = framework / 'Sentry'
+    symbols = run('xcrun', 'nm', '-arch', 'arm64', '-Uj', str(stub))
+    if set(symbols.splitlines()) - {'__mh_dylib_header'}:
+        raise ValueError('Expected the codeless Sentry framework placeholder')
+    for binary in binaries:
+        if binary != stub and '@rpath/Sentry.framework/Sentry' in run('xcrun', 'otool', '-L', str(binary)):
+            raise ValueError('Sentry must be linked statically before removing its placeholder')
+    resources = app / 'SentryResources.bundle'
+    if resources.exists():
+        raise ValueError('Sentry resource bundle already exists')
+    shutil.copytree(framework, resources, ignore=shutil.ignore_patterns('Sentry', '_CodeSignature'))
+    metadata.pop('CFBundleExecutable', None)
+    metadata.pop('MinimumOSVersion', None)
+    metadata['CFBundlePackageType'] = 'BNDL'
+    (resources / 'Info.plist').write_bytes(plistlib.dumps(metadata, sort_keys=False))
+    shutil.rmtree(framework)
+    print('Preserved static Sentry privacy resources without its codeless framework placeholder')
+
+
 def prepare(app: str | Path, strip_symbols: bool = False) -> None:
     app = Path(app).resolve(strict=True)
     if app.suffix != '.app' or not app.is_dir():
         raise ValueError('Expected an existing .app directory')
+    binary_paths: list[Path] = []
     for path in sorted(app.rglob('*')):
         if path.is_symlink() and not path.resolve().is_relative_to(app):
             raise ValueError(f'Symlink escapes bundle: {path}')
@@ -24,6 +54,7 @@ def prepare(app: str | Path, strip_symbols: bool = False) -> None:
             magic = f.read(4)
         if magic not in MACH_MAGICS:
             continue
+        binary_paths.append(path)
         architectures = set(run('xcrun', 'lipo', '-archs', str(path)).split())
         if 'arm64' not in architectures or architectures - {'arm64', 'x86_64', 'i386'}:
             raise ValueError(f'Unexpected architecture(s): {path}')
@@ -42,6 +73,7 @@ def prepare(app: str | Path, strip_symbols: bool = False) -> None:
             Path(temporary).unlink(missing_ok=True)
         print(f'Normalized thin arm64: {path.relative_to(app)}')
 
+    preserve_sentry_resources(app, binary_paths)
     _, binaries, _ = validate(app)
     if strip_symbols:
         for relative in binaries:
