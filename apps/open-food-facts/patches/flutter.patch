@@ -1,0 +1,13 @@
+diff --git a/packages/flutter_tools/lib/src/ios/xcodeproj.dart b/packages/flutter_tools/lib/src/ios/xcodeproj.dart
+index 9b03cffc..ba9f3748 100644
+--- a/packages/flutter_tools/lib/src/ios/xcodeproj.dart
++++ b/packages/flutter_tools/lib/src/ios/xcodeproj.dart
+@@ -216,6 +216,8 @@ class XcodeProjectInterpreter {
+     return <String>[
+       ...xcrunCommand(),
+       'xcodebuild',
++      '-packageAuthorizationProvider',
++      'netrc',
+       '-clonedSourcePackagesDirPath',
+       cachePath,
+       if (skipPackageUpdatesAndValidation) ...<String>[
