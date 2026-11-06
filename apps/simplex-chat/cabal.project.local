@@ -1,0 +1,19 @@
+shared: False
+library-vanilla: True
+
+package simplex-chat
+  flags: +swift +client_library
+  static: True
+  ghc-options: -staticlib -threaded -DIOS
+  extra-lib-dirs: @OPENSSL_PREFIX@/lib @LIBFFI_PREFIX@/lib
+
+package simplexmq
+  flags: +swift +client_library +commoncrypto
+  extra-lib-dirs: @OPENSSL_PREFIX@/lib
+  extra-include-dirs: @OPENSSL_PREFIX@/include
+
+package direct-sqlcipher
+  flags: +commoncrypto
+
+package entropy
+  flags: +DoNotGetEntropy
