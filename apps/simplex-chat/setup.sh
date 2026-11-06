@@ -47,7 +47,7 @@ path = Path(sys.argv[1])
 path.write_text(path.read_text().replace('url: http://hackage.haskell.org/', 'url: https://hackage.haskell.org/'))
 PY
 if [[ ! -f "$CABAL_DIR/packages/hackage.haskell.org/01-index.cache" ]]; then
-  cabal update 2>&1 | tee "$work/logs/cabal-update.log"
+  cabal update --ignore-project 2>&1 | tee "$work/logs/cabal-update.log"
 fi
 ffi_archive="$work/tools/libffi-$LIBFFI_VERSION.tar.gz"
 download "$ffi_archive" \
