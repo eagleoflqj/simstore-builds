@@ -1,0 +1,26 @@
+diff --git a/apps/readest-app/src-tauri/gen/apple/Readest.xcodeproj/project.pbxproj b/apps/readest-app/src-tauri/gen/apple/Readest.xcodeproj/project.pbxproj
+index 669603e..ca65fe3 100644
+--- a/apps/readest-app/src-tauri/gen/apple/Readest.xcodeproj/project.pbxproj
++++ b/apps/readest-app/src-tauri/gen/apple/Readest.xcodeproj/project.pbxproj
+@@ -524,7 +524,7 @@
+ 			);
+ 			runOnlyForDeploymentPostprocessing = 0;
+ 			shellPath = /bin/sh;
+-			shellScript = "pnpm tauri ios xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths \"${FRAMEWORK_SEARCH_PATHS:?}\" --header-search-paths \"${HEADER_SEARCH_PATHS:?}\" --gcc-preprocessor-definitions \"${GCC_PREPROCESSOR_DEFINITIONS:-}\" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS:?}";
++			shellScript = "test -s \"${SRCROOT}/Externals/arm64/${CONFIGURATION}/libapp.a\"";
+ 		};
+ /* End PBXShellScriptBuildPhase section */
+ 
+diff --git a/apps/readest-app/src-tauri/gen/apple/project.yml b/apps/readest-app/src-tauri/gen/apple/project.yml
+index 25112d7..5d7bd9c 100644
+--- a/apps/readest-app/src-tauri/gen/apple/project.yml
++++ b/apps/readest-app/src-tauri/gen/apple/project.yml
+@@ -119,7 +119,7 @@ targets:
+       - sdk: CarPlay.framework
+       - sdk: MediaPlayer.framework
+     preBuildScripts:
+-      - script: pnpm tauri ios xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths "${FRAMEWORK_SEARCH_PATHS:?}" --header-search-paths "${HEADER_SEARCH_PATHS:?}" --gcc-preprocessor-definitions "${GCC_PREPROCESSOR_DEFINITIONS:-}" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS:?}
++      - script: test -s "${SRCROOT}/Externals/arm64/${CONFIGURATION}/libapp.a"
+         name: Build Rust Code
+         basedOnDependencyAnalysis: false
+         outputFiles:

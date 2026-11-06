@@ -1,0 +1,12 @@
+id: readest
+name: Readest
+
+source:
+  license: AGPL-3.0-or-later
+  repository: https://github.com/readest/readest
+  version: 0.12.20
+  revision: 28aab23e039a23511bc478c23bf5278daa43cc68
+
+build:
+  script: build.sh
+  deploymentTarget: "16.4"
