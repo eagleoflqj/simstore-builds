@@ -1,0 +1,12 @@
+id: simplex-chat
+name: SimpleX Chat
+
+source:
+  license: AGPL-3.0-only
+  repository: https://github.com/simplex-chat/simplex-chat
+  version: v7.0.3
+  revision: b3907c9de7a2c596075762bf05ba3e1d2532aff1
+
+build:
+  script: build.sh
+  deploymentTarget: "16.0"
