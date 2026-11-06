@@ -1,0 +1,3 @@
+# Match the MoltenVK version shipped by the upstream iOS recipe.
+MOLTENVK_VERSION=1.2.9
+MOLTENVK_SHA256=3430941f9f5c4526da9a2c8527d57897fff7f7352740584bcec6a7f7a4504f50
