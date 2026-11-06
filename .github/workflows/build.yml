@@ -124,7 +124,7 @@ jobs:
 
   publish:
     needs: [select, smoke-test]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'
     name: Publish ${{ matrix.id }}
     runs-on: ubuntu-26.04
     permissions:
@@ -150,7 +150,7 @@ jobs:
 
   update-catalog:
     needs: publish
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'
     permissions:
       contents: write
     uses: ./.github/workflows/update-index.yml
