@@ -1,5 +1,5 @@
-# Firefox release firefox-v159.0; Nimbus matches MozillaRustComponents/Package.swift.
+# Nimbus matches MozillaRustComponents/Package.swift at the pinned source revision.
 NODE_VERSION=26.13.0
 NODE_SHA256=6f5b3187d9df9fc007e881167905bc7d69ad26450ddc377c83d63256a2495b6e
-NIMBUS_VERSION=160.20261020165345
-NIMBUS_SHA256=ef0a64c239cda9d4718ef4597816752927a417c8225eadcafcc07e7a5df3d085
+NIMBUS_VERSION=160.20261022050218
+NIMBUS_SHA256=b611f8d45ecd81e53d7c71087ad7b1d62f54ab161c4fe6e147d10333a8bba01a
