@@ -1,0 +1,12 @@
+id: onion-browser
+name: Onion Browser
+
+source:
+  license: LicenseRef-OnionBrowser
+  repository: https://github.com/OnionBrowser/OnionBrowser
+  version: v3.4.5
+  revision: f23ad4ab84ce94b8b738278c3dd140d2f1bb4e6f
+
+build:
+  script: build.sh
+  deploymentTarget: "17.0"

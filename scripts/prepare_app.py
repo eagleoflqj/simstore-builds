@@ -6,6 +6,7 @@ import argparse
 import os
 from pathlib import Path
 import plistlib
+import re
 import shutil
 import stat
 import tempfile
@@ -13,31 +14,43 @@ import tempfile
 from validate import MACH_MAGICS, run, validate
 
 
-def preserve_sentry_resources(app: Path, binaries: list[Path]) -> None:
-    """Retain static Sentry's privacy resources without Xcode's iOS 100 placeholder."""
-    framework = app / 'Frameworks/Sentry.framework'
-    if not framework.is_dir():
-        return
-    metadata = plistlib.loads((framework / 'Info.plist').read_bytes())
-    if metadata.get('MinimumOSVersion') != '100.0':
-        return
-    stub = framework / 'Sentry'
-    symbols = run('xcrun', 'nm', '-arch', 'arm64', '-Uj', str(stub))
-    if set(symbols.splitlines()) - {'__mh_dylib_header'}:
-        raise ValueError('Expected the codeless Sentry framework placeholder')
-    for binary in binaries:
-        if binary != stub and '@rpath/Sentry.framework/Sentry' in run('xcrun', 'otool', '-L', str(binary)):
-            raise ValueError('Sentry must be linked statically before removing its placeholder')
-    resources = app / 'SentryResources.bundle'
-    if resources.exists():
-        raise ValueError('Sentry resource bundle already exists')
-    shutil.copytree(framework, resources, ignore=shutil.ignore_patterns('Sentry', '_CodeSignature'))
-    metadata.pop('CFBundleExecutable', None)
-    metadata.pop('MinimumOSVersion', None)
-    metadata['CFBundlePackageType'] = 'BNDL'
-    (resources / 'Info.plist').write_bytes(plistlib.dumps(metadata, sort_keys=False))
-    shutil.rmtree(framework)
-    print('Preserved static Sentry privacy resources without its codeless framework placeholder')
+def preserve_static_framework_resources(app: Path, binaries: list[Path]) -> None:
+    """Retain resources from Xcode's codeless static framework placeholders."""
+    dependencies: dict[Path, str] | None = None
+    for framework in sorted(app.rglob('*.framework'), key=lambda path: len(path.parts), reverse=True):
+        metadata = plistlib.loads((framework / 'Info.plist').read_bytes())
+        if metadata.get('MinimumOSVersion') != '100.0':
+            continue
+        name = framework.stem
+        if metadata.get('CFBundleExecutable') != name:
+            raise ValueError(f'Unexpected placeholder executable: {framework.name}')
+        stub = framework / name
+        symbols = run('xcrun', 'nm', '-arch', 'arm64', '-Uj', str(stub))
+        sections = re.findall(r'\bsectname \S+.*?^\s+size (0x[0-9a-fA-F]+)',
+                              run('xcrun', 'otool', '-l', str(stub)), re.M | re.S)
+        if (set(symbols.splitlines()) - {'__mh_dylib_header'}
+                or not sections or any(int(size, 16) for size in sections)):
+            raise ValueError(f'Expected a codeless framework placeholder: {framework.name}')
+        if dependencies is None:
+            dependencies = {binary: run('xcrun', 'otool', '-L', str(binary)) for binary in binaries}
+        if any(binary != stub and f'{framework.name}/{name}' in output
+               for binary, output in dependencies.items()):
+            raise ValueError(f'{name} must be linked statically before removing its placeholder')
+        if any(path.name not in (name, 'Info.plist', '_CodeSignature') for path in framework.iterdir()):
+            resources = framework.parent.parent / f'{name}Resources.bundle'
+            if resources.exists():
+                raise ValueError(f'{name} resource bundle already exists')
+            shutil.copytree(framework, resources)
+            (resources / name).unlink()
+            signature = resources / '_CodeSignature'
+            if signature.exists():
+                shutil.rmtree(signature)
+            metadata.pop('CFBundleExecutable', None)
+            metadata.pop('MinimumOSVersion', None)
+            metadata['CFBundlePackageType'] = 'BNDL'
+            (resources / 'Info.plist').write_bytes(plistlib.dumps(metadata, sort_keys=False))
+        shutil.rmtree(framework)
+        print(f'Removed codeless framework placeholder, preserving resources: {framework.name}')
 
 
 def prepare(app: str | Path, strip_symbols: bool = False) -> None:
@@ -73,7 +86,7 @@ def prepare(app: str | Path, strip_symbols: bool = False) -> None:
             Path(temporary).unlink(missing_ok=True)
         print(f'Normalized thin arm64: {path.relative_to(app)}')
 
-    preserve_sentry_resources(app, binary_paths)
+    preserve_static_framework_resources(app, binary_paths)
     _, binaries, _ = validate(app)
     if strip_symbols:
         for relative in binaries:
