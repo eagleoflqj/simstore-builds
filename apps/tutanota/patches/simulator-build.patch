@@ -1,0 +1,83 @@
+diff --git a/app-ios/buildScripts/generate-tokenizer-header.sh b/app-ios/buildScripts/generate-tokenizer-header.sh
+index 5b66c80..1f34241 100644
+--- a/app-ios/buildScripts/generate-tokenizer-header.sh
++++ b/app-ios/buildScripts/generate-tokenizer-header.sh
+@@ -7,9 +7,8 @@ set -x
+ # error on unbound variables
+ set -u
+ 
+-# XCode tries to be helpful and overwrites the PATH. Reset that.
+-# If we don't do this compiling a binary to run it will fail with fun issues
+-PATH="$(bash -l -c 'echo $PATH')"
++# Use the isolated toolchain supplied by the build environment.
++export PATH="$CARGO_HOME/bin:$PATH"
+ 
+ EXTENSION_DIR="$SRCROOT/../libs/Signal-FTS5-Extension"
+-cargo run --manifest-path="${EXTENSION_DIR}/Cargo.toml" --features=cbindgen --bin generate-header -- "$SCRIPT_OUTPUT_FILE_0"
++env -u SDKROOT -u IPHONEOS_DEPLOYMENT_TARGET cargo run --locked --manifest-path="${EXTENSION_DIR}/Cargo.toml" --features=cbindgen --bin generate-header -- "$SCRIPT_OUTPUT_FILE_0"
+diff --git a/src/app-kit/mimimi/make.js b/src/app-kit/mimimi/make.js
+index fe058ec..96cc6e8 100644
+--- a/src/app-kit/mimimi/make.js
++++ b/src/app-kit/mimimi/make.js
+@@ -24,7 +24,7 @@ function getTargets(platform) {
+ 		case "linux":
+ 			return ["x86_64-unknown-linux-gnu"]
+ 		case "darwin":
+-			return ["x86_64-apple-darwin", "aarch64-apple-darwin"]
++			return ["aarch64-apple-darwin"]
+ 		case "native":
+ 			return getTargets(process.platform)
+ 		default:
+diff --git a/tuta-sdk/ios/build-scripts/generate-swift.sh b/tuta-sdk/ios/build-scripts/generate-swift.sh
+index c3b1abb..5d62e0c 100755
+--- a/tuta-sdk/ios/build-scripts/generate-swift.sh
++++ b/tuta-sdk/ios/build-scripts/generate-swift.sh
+@@ -62,7 +62,7 @@ generateLibrary() {
+ 
+ genSwiftIfNeeded() {
+   if [ "${SRC_ROOT}/target/$1/${RELFLAG}/libtutasdk.dylib" -nt "$SRC_ROOT/bindings/tutasdk.swift" ]; then
+-    cargo run --package uniffi-bindgen -- generate --library "${SRC_ROOT}/target/$1/${RELFLAG}/libtutasdk.dylib" --out-dir "$SRC_ROOT/bindings" --language=swift
++    cargo run --locked --package uniffi-bindgen -- generate --library "${SRC_ROOT}/target/$1/${RELFLAG}/libtutasdk.dylib" --out-dir "$SRC_ROOT/bindings" --language=swift
+   else
+     echo "File $SRC_ROOT/bindings/tutasdk.swift is up to date, no need to rengenerate"
+   fi
+diff --git a/tuta-sdk/ios/build-scripts/make-tutasdk.sh b/tuta-sdk/ios/build-scripts/make-tutasdk.sh
+index 188af79..60b533a 100755
+--- a/tuta-sdk/ios/build-scripts/make-tutasdk.sh
++++ b/tuta-sdk/ios/build-scripts/make-tutasdk.sh
+@@ -1,5 +1,6 @@
+ #!/usr/bin/env bash
+ set -eEuvx
++export PATH="$CARGO_HOME/bin:$PATH"
+ 
+ IS_SIMULATOR=0
+ if [ "${LLVM_TARGET_TRIPLE_SUFFIX-}" = "-simulator" ]; then
+@@ -7,4 +8,4 @@ if [ "${LLVM_TARGET_TRIPLE_SUFFIX-}" = "-simulator" ]; then
+ fi
+ 
+ bash $SRCROOT/build-scripts/xc-universal-binary.sh tuta-sdk $SRCROOT/../.. "$CONFIGURATION"
+-env -i HOME="$HOME" bash -l -c "$SRCROOT/build-scripts/generate-swift.sh $SRCROOT/../.. \"$CONFIGURATION\" \"$IS_SIMULATOR\" \"${ARCHS[@]}\""
++env -u SDKROOT -u IPHONEOS_DEPLOYMENT_TARGET bash "$SRCROOT/build-scripts/generate-swift.sh" "$SRCROOT/../.." "$CONFIGURATION" "$IS_SIMULATOR" "$ARCHS"
+diff --git a/tuta-sdk/ios/build-scripts/xc-universal-binary.sh b/tuta-sdk/ios/build-scripts/xc-universal-binary.sh
+index 6747ce5..8d5c49e 100755
+--- a/tuta-sdk/ios/build-scripts/xc-universal-binary.sh
++++ b/tuta-sdk/ios/build-scripts/xc-universal-binary.sh
+@@ -8,8 +8,8 @@ function error_help()
+ }
+ trap error_help ERR
+ 
+-# XCode tries to be helpful and overwrites the PATH. Reset that.
+-PATH="$(bash -l -c 'echo $PATH')"
++# Use the isolated toolchain supplied by the build environment.
++export PATH="$CARGO_HOME/bin:$PATH"
+ 
+ # This should be invoked from inside xcode, not manually
+ if [[ "${#}" -lt 3 ]]
+@@ -41,6 +41,6 @@ fi
+ 
+ SCRIPT_DIR=$(dirname "$0")
+ for triple in $(bash "$SCRIPT_DIR/rust-triple.sh" $IS_SIMULATOR $ARCHS); do
+-  cargo rustc --manifest-path="${SRC_ROOT}/Cargo.toml" -p "${FFI_TARGET}" --lib $RELFLAG --target $triple -v $RUSTC_ARGS
++  cargo rustc --locked --manifest-path="${SRC_ROOT}/Cargo.toml" -p "${FFI_TARGET}" --lib $RELFLAG --target $triple -v $RUSTC_ARGS
+ done
+ 
