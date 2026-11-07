@@ -1,0 +1,12 @@
+id: tutanota
+name: Tuta Mail
+
+source:
+  license: GPL-3.0-only
+  repository: https://github.com/tutao/tutanota
+  version: v366.261105.0
+  revision: 332e57461cdc4fe4a4ad9bdc8555f56df02931c0
+
+build:
+  script: build.sh
+  deploymentTarget: "16.0"
