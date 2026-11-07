@@ -1,0 +1,13 @@
+diff --git a/SignalRingRTC/bin/set-up-for-cocoapods b/SignalRingRTC/bin/set-up-for-cocoapods
+index d44175e..2e0e631 100755
+--- a/SignalRingRTC/bin/set-up-for-cocoapods
++++ b/SignalRingRTC/bin/set-up-for-cocoapods
+@@ -17,7 +17,7 @@ PROJECT_DIR=.
+ 
+ . config/version.sh
+ 
+-CACHE_DIR=~/Library/Caches/org.signal.ringrtc
++CACHE_DIR=${RINGRTC_CACHE_DIR:-"$HOME/Library/Caches/org.signal.ringrtc"}
+ PREBUILD_DIR=${CACHE_DIR}/prebuild-${RINGRTC_VERSION}
+ 
+ if [ -f out/release/libringrtc/ringrtc.h ] && [ ! -L out/release/libringrtc/ringrtc.h ]; then
