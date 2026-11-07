@@ -1,0 +1,5 @@
+description:
+  en: Exchange messages, share files, and join voice calls on Mattermost servers.
+  zh-Hans: 连接 Mattermost 服务器，收发消息、分享文件并参与语音通话。
+categories:
+  - communication

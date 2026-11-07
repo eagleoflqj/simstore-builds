@@ -1,0 +1,12 @@
+diff --git a/ratex-react-native.podspec b/ratex-react-native.podspec
+--- a/ratex-react-native.podspec
++++ b/ratex-react-native.podspec
+@@ -32,7 +32,7 @@
+   }
+ 
+   # Prebuilt static library (libratex_ffi.a) packaged as XCFramework
+-  s.vendored_frameworks = "ios/RaTeX.xcframework"
++  s.vendored_frameworks = "ios/RaTeXFFI.xcframework"
+ 
+   # KaTeX fonts — loaded at runtime from this bundle
+   s.resource_bundles = {

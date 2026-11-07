@@ -1,0 +1,12 @@
+id: mattermost
+name: Mattermost
+
+source:
+  license: Apache-2.0
+  repository: https://github.com/mattermost/mattermost-mobile
+  version: v2.45.1
+  revision: 35cf638d988fc96c5981f35d08401a430ce826af
+
+build:
+  script: build.sh
+  deploymentTarget: "18.0"

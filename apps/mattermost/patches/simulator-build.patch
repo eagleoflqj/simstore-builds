@@ -1,0 +1,634 @@
+diff --git a/ios/Mattermost.xcodeproj/project.pbxproj b/ios/Mattermost.xcodeproj/project.pbxproj
+index 330adf2..23a0c3d 100644
+--- a/ios/Mattermost.xcodeproj/project.pbxproj
++++ b/ios/Mattermost.xcodeproj/project.pbxproj
+@@ -225,7 +225,7 @@
+ 		0DB14DFDF6E04FA69FE769DC /* OpenSans-SemiBoldItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "OpenSans-SemiBoldItalic.ttf"; path = "../assets/fonts/OpenSans-SemiBoldItalic.ttf"; sourceTree = "<group>"; };
+ 		13B07F961A680F5B00A75B9A /* Mattermost.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Mattermost.app; sourceTree = BUILT_PRODUCTS_DIR; };
+ 		13B07FB01A68108700A75B9A /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Mattermost/AppDelegate.swift; sourceTree = "<group>"; };
+-		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = Mattermost/Images.xcassets; sourceTree = "<group>"; };
++		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = ../dist/Images.xcassets; sourceTree = "<group>"; };
+ 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Mattermost/Info.plist; sourceTree = "<group>"; };
+ 		1FA24657E0EE0B2378EFED0E /* Pods_Mattermost.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Mattermost.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+ 		24C9C33C1C823BB8E1B3E161 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Mattermost/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+@@ -574,7 +574,7 @@
+ 				672D984629F1927E004228D6 /* InfoPlist.strings */,
+ 			);
+ 			name = de.lproj;
+-			path = Mattermost/i18n/de.lproj;
++			path = ../dist/i18n/de.lproj;
+ 			sourceTree = "<group>";
+ 		};
+ 		672D984829F1927E004228D6 /* ja.lproj */ = {
+@@ -584,7 +584,7 @@
+ 				672D984929F1927E004228D6 /* InfoPlist.strings */,
+ 			);
+ 			name = ja.lproj;
+-			path = Mattermost/i18n/ja.lproj;
++			path = ../dist/i18n/ja.lproj;
+ 			sourceTree = "<group>";
+ 		};
+ 		672D984B29F1927E004228D6 /* fa.lproj */ = {
+@@ -594,7 +594,7 @@
+ 				672D984C29F1927E004228D6 /* InfoPlist.strings */,
+ 			);
+ 			name = fa.lproj;
+-			path = Mattermost/i18n/fa.lproj;
++			path = ../dist/i18n/fa.lproj;
+ 			sourceTree = "<group>";
+ 		};
+ 		672D984E29F1927F004228D6 /* pl.lproj */ = {
+@@ -604,7 +604,7 @@
+ 				672D984F29F1927F004228D6 /* InfoPlist.strings */,
+ 			);
+ 			name = pl.lproj;
+-			path = Mattermost/i18n/pl.lproj;
++			path = ../dist/i18n/pl.lproj;
+ 			sourceTree = "<group>";
+ 		};
+ 		672D985129F1927F004228D6 /* ar.lproj */ = {
+@@ -614,7 +614,7 @@
+ 				672D985229F1927F004228D6 /* InfoPlist.strings */,
+ 			);
+ 			name = ar.lproj;
+-			path = Mattermost/i18n/ar.lproj;
++			path = ../dist/i18n/ar.lproj;
+ 			sourceTree = "<group>";
+ 		};
+ 		672D985429F1927F004228D6 /* sv.lproj */ = {
+@@ -624,7 +624,7 @@
+ 				672D985529F1927F004228D6 /* InfoPlist.strings */,
+ 			);
+ 			name = sv.lproj;
+-			path = Mattermost/i18n/sv.lproj;
++			path = ../dist/i18n/sv.lproj;
+ 			sourceTree = "<group>";
+ 		};
+ 		672D985729F1927F004228D6 /* ru.lproj */ = {
+@@ -634,7 +634,7 @@
+ 				672D985829F1927F004228D6 /* InfoPlist.strings */,
+ 			);
+ 			name = ru.lproj;
+-			path = Mattermost/i18n/ru.lproj;
++			path = ../dist/i18n/ru.lproj;
+ 			sourceTree = "<group>";
+ 		};
+ 		672D985A29F1927F004228D6 /* ro.lproj */ = {
+@@ -644,7 +644,7 @@
+ 				672D985B29F1927F004228D6 /* InfoPlist.strings */,
+ 			);
+ 			name = ro.lproj;
+-			path = Mattermost/i18n/ro.lproj;
++			path = ../dist/i18n/ro.lproj;
+ 			sourceTree = "<group>";
+ 		};
+ 		672D985D29F1927F004228D6 /* bg.lproj */ = {
+@@ -654,7 +654,7 @@
+ 				672D985E29F1927F004228D6 /* InfoPlist.strings */,
+ 			);
+ 			name = bg.lproj;
+-			path = Mattermost/i18n/bg.lproj;
++			path = ../dist/i18n/bg.lproj;
+ 			sourceTree = "<group>";
+ 		};
+ 		672D986029F1927F004228D6 /* tr.lproj */ = {
+@@ -664,7 +664,7 @@
+ 				672D986129F1927F004228D6 /* InfoPlist.strings */,
+ 			);
+ 			name = tr.lproj;
+-			path = Mattermost/i18n/tr.lproj;
++			path = ../dist/i18n/tr.lproj;
+ 			sourceTree = "<group>";
+ 		};
+ 		672D986329F1927F004228D6 /* zh-TW.lproj */ = {
+@@ -674,7 +674,7 @@
+ 				672D986429F1927F004228D6 /* InfoPlist.strings */,
+ 			);
+ 			name = "zh-TW.lproj";
+-			path = "Mattermost/i18n/zh-TW.lproj";
++			path = "../dist/i18n/zh-TW.lproj";
+ 			sourceTree = "<group>";
+ 		};
+ 		672D986629F1927F004228D6 /* en.lproj */ = {
+@@ -684,7 +684,7 @@
+ 				672D986729F1927F004228D6 /* InfoPlist.strings */,
+ 			);
+ 			name = en.lproj;
+-			path = Mattermost/i18n/en.lproj;
++			path = ../dist/i18n/en.lproj;
+ 			sourceTree = "<group>";
+ 		};
+ 		672D986929F1927F004228D6 /* en_AU.lproj */ = {
+@@ -694,7 +694,7 @@
+ 				672D986A29F1927F004228D6 /* InfoPlist.strings */,
+ 			);
+ 			name = en_AU.lproj;
+-			path = Mattermost/i18n/en_AU.lproj;
++			path = ../dist/i18n/en_AU.lproj;
+ 			sourceTree = "<group>";
+ 		};
+ 		672D986C29F1927F004228D6 /* hu.lproj */ = {
+@@ -704,7 +704,7 @@
+ 				672D986D29F1927F004228D6 /* InfoPlist.strings */,
+ 			);
+ 			name = hu.lproj;
+-			path = Mattermost/i18n/hu.lproj;
++			path = ../dist/i18n/hu.lproj;
+ 			sourceTree = "<group>";
+ 		};
+ 		672D986F29F1927F004228D6 /* fr.lproj */ = {
+@@ -714,7 +714,7 @@
+ 				672D987029F1927F004228D6 /* InfoPlist.strings */,
+ 			);
+ 			name = fr.lproj;
+-			path = Mattermost/i18n/fr.lproj;
++			path = ../dist/i18n/fr.lproj;
+ 			sourceTree = "<group>";
+ 		};
+ 		672D987229F1927F004228D6 /* ko.lproj */ = {
+@@ -724,7 +724,7 @@
+ 				672D987329F1927F004228D6 /* InfoPlist.strings */,
+ 			);
+ 			name = ko.lproj;
+-			path = Mattermost/i18n/ko.lproj;
++			path = ../dist/i18n/ko.lproj;
+ 			sourceTree = "<group>";
+ 		};
+ 		672D987529F1927F004228D6 /* zh-CN.lproj */ = {
+@@ -734,7 +734,7 @@
+ 				672D987629F1927F004228D6 /* InfoPlist.strings */,
+ 			);
+ 			name = "zh-CN.lproj";
+-			path = "Mattermost/i18n/zh-CN.lproj";
++			path = "../dist/i18n/zh-CN.lproj";
+ 			sourceTree = "<group>";
+ 		};
+ 		672D987829F1927F004228D6 /* es.lproj */ = {
+@@ -744,7 +744,7 @@
+ 				672D987929F1927F004228D6 /* InfoPlist.strings */,
+ 			);
+ 			name = es.lproj;
+-			path = Mattermost/i18n/es.lproj;
++			path = ../dist/i18n/es.lproj;
+ 			sourceTree = "<group>";
+ 		};
+ 		672D987B29F1927F004228D6 /* it.lproj */ = {
+@@ -754,7 +754,7 @@
+ 				672D987C29F1927F004228D6 /* InfoPlist.strings */,
+ 			);
+ 			name = it.lproj;
+-			path = Mattermost/i18n/it.lproj;
++			path = ../dist/i18n/it.lproj;
+ 			sourceTree = "<group>";
+ 		};
+ 		672D987E29F1927F004228D6 /* nl.lproj */ = {
+@@ -764,7 +764,7 @@
+ 				672D987F29F1927F004228D6 /* InfoPlist.strings */,
+ 			);
+ 			name = nl.lproj;
+-			path = Mattermost/i18n/nl.lproj;
++			path = ../dist/i18n/nl.lproj;
+ 			sourceTree = "<group>";
+ 		};
+ 		672D988129F1927F004228D6 /* pt-BR.lproj */ = {
+@@ -774,7 +774,7 @@
+ 				672D988229F1927F004228D6 /* InfoPlist.strings */,
+ 			);
+ 			name = "pt-BR.lproj";
+-			path = "Mattermost/i18n/pt-BR.lproj";
++			path = "../dist/i18n/pt-BR.lproj";
+ 			sourceTree = "<group>";
+ 		};
+ 		672D988429F1927F004228D6 /* uk.lproj */ = {
+@@ -784,7 +784,7 @@
+ 				672D988529F1927F004228D6 /* InfoPlist.strings */,
+ 			);
+ 			name = uk.lproj;
+-			path = Mattermost/i18n/uk.lproj;
++			path = ../dist/i18n/uk.lproj;
+ 			sourceTree = "<group>";
+ 		};
+ 		7F42880528664AB2006B48E1 /* Utils */ = {
+@@ -1427,11 +1427,13 @@
+ 				"${PODS_ROOT}/Target Support Files/Pods-Mattermost/Pods-Mattermost-frameworks.sh",
+ 				"${PODS_XCFRAMEWORKS_BUILD_DIR}/JitsiWebRTC/WebRTC.framework/WebRTC",
+ 				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermesvm.framework/hermesvm",
++				"${PODS_XCFRAMEWORKS_BUILD_DIR}/ratex-react-native/RaTeXFFI.framework/RaTeXFFI",
+ 			);
+ 			name = "[CP] Embed Pods Frameworks";
+ 			outputPaths = (
+ 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/WebRTC.framework",
+ 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermesvm.framework",
++				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/RaTeXFFI.framework",
+ 			);
+ 			runOnlyForDeploymentPostprocessing = 0;
+ 			shellPath = /bin/sh;
+@@ -2066,7 +2068,7 @@
+ 					"-lc++",
+ 				);
+ 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
+-				PRODUCT_BUNDLE_IDENTIFIER = com.mattermost.rnbeta;
++				PRODUCT_BUNDLE_IDENTIFIER = com.mattermost.rn;
+ 				PRODUCT_NAME = Mattermost;
+ 				PROVISIONING_PROFILE = "";
+ 				PROVISIONING_PROFILE_SPECIFIER = "";
+@@ -2105,7 +2107,7 @@
+ 					"-lc++",
+ 				);
+ 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
+-				PRODUCT_BUNDLE_IDENTIFIER = com.mattermost.rnbeta;
++				PRODUCT_BUNDLE_IDENTIFIER = com.mattermost.rn;
+ 				PRODUCT_NAME = Mattermost;
+ 				PROVISIONING_PROFILE = "";
+ 				PROVISIONING_PROFILE_SPECIFIER = "";
+@@ -2156,8 +2158,12 @@
+ 					"$(inherited)",
+ 					"-DFB_SONARKIT_ENABLED=1",
+ 				);
++				OTHER_LDFLAGS = (
++					"$(inherited)",
++					"-lc++",
++				);
+ 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
+-				PRODUCT_BUNDLE_IDENTIFIER = com.mattermost.rnbeta.NotificationService;
++				PRODUCT_BUNDLE_IDENTIFIER = com.mattermost.rn.NotificationService;
+ 				PRODUCT_NAME = "$(TARGET_NAME)";
+ 				SKIP_INSTALL = YES;
+ 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+@@ -2204,8 +2210,12 @@
+ 				);
+ 				MTL_FAST_MATH = YES;
+ 				OTHER_CFLAGS = "$(inherited)";
++				OTHER_LDFLAGS = (
++					"$(inherited)",
++					"-lc++",
++				);
+ 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
+-				PRODUCT_BUNDLE_IDENTIFIER = com.mattermost.rnbeta.NotificationService;
++				PRODUCT_BUNDLE_IDENTIFIER = com.mattermost.rn.NotificationService;
+ 				PRODUCT_NAME = "$(TARGET_NAME)";
+ 				SKIP_INSTALL = YES;
+ 				SWIFT_COMPILATION_MODE = wholemodule;
+@@ -2255,8 +2265,12 @@
+ 				MARKETING_VERSION = 1.0;
+ 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+ 				MTL_FAST_MATH = YES;
++				OTHER_LDFLAGS = (
++					"$(inherited)",
++					"-lc++",
++				);
+ 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
+-				PRODUCT_BUNDLE_IDENTIFIER = com.mattermost.rnbeta.MattermostShare;
++				PRODUCT_BUNDLE_IDENTIFIER = com.mattermost.rn.MattermostShare;
+ 				PRODUCT_NAME = "$(TARGET_NAME)";
+ 				SKIP_INSTALL = YES;
+ 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+@@ -2307,8 +2321,12 @@
+ 				);
+ 				MARKETING_VERSION = 1.0;
+ 				MTL_FAST_MATH = YES;
++				OTHER_LDFLAGS = (
++					"$(inherited)",
++					"-lc++",
++				);
+ 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
+-				PRODUCT_BUNDLE_IDENTIFIER = com.mattermost.rnbeta.MattermostShare;
++				PRODUCT_BUNDLE_IDENTIFIER = com.mattermost.rn.MattermostShare;
+ 				PRODUCT_NAME = "$(TARGET_NAME)";
+ 				SKIP_INSTALL = YES;
+ 				SWIFT_COMPILATION_MODE = wholemodule;
+diff --git a/ios/Mattermost/AppDelegate.swift b/ios/Mattermost/AppDelegate.swift
+index e9d3e96..e78cd71 100644
+--- a/ios/Mattermost/AppDelegate.swift
++++ b/ios/Mattermost/AppDelegate.swift
+@@ -31,6 +31,7 @@ class AppDelegate: ExpoAppDelegate, OrientationLockable {
+     @objc var orientationLock: UIInterfaceOrientationMask = .allButUpsideDown
+ 
+     var window: UIWindow?
++    var launchOptions: [UIApplication.LaunchOptionsKey: Any]?
+ 
+     var reactNativeDelegate: ExpoReactNativeFactoryDelegate?
+     var reactNativeFactory: RCTReactNativeFactory?
+@@ -118,28 +119,12 @@ class AppDelegate: ExpoAppDelegate, OrientationLockable {
+         reactNativeDelegate = delegate
+         reactNativeFactory = factory
+ 
+-        #if os(iOS) || os(tvOS)
+-        window = UIWindow(frame: UIScreen.main.bounds)
+-        factory.startReactNative(
+-            withModuleName: "Mattermost",
+-            in: window,
+-            launchOptions: launchOptions
+-        )
+-        #endif
++        self.launchOptions = launchOptions
+ 
+         let result = super.application(application, didFinishLaunchingWithOptions: launchOptions)
+ 
+         os_log("Mattermost started!!")
+ 
+-        if let factory = reactNativeFactory {
+-            PasteInputModule.setup(factory.rootViewFactory)
+-        }
+-
+-        #if canImport(mattermost_intune)
+-        // Restore enrollments if needed (silent, non-blocking)
+-        IntuneAccess.checkAndRestoreEnrollmentOnLaunch()
+-        #endif
+-
+         return result
+     }
+ 
+@@ -333,6 +318,91 @@ class AppDelegate: ExpoAppDelegate, OrientationLockable {
+     }
+ }
+ 
++// Forward the single scene's events to the existing database and Expo lifecycle handlers.
++@objc(MattermostSceneDelegate)
++class SceneDelegate: UIResponder, UIWindowSceneDelegate {
++    var window: UIWindow?
++
++    private var appDelegate: AppDelegate? {
++        UIApplication.shared.delegate as? AppDelegate
++    }
++
++    func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
++        guard let windowScene = scene as? UIWindowScene,
++              let appDelegate,
++              let factory = appDelegate.reactNativeFactory else { return }
++
++        let sceneWindow = UIWindow(windowScene: windowScene)
++        window = sceneWindow
++        appDelegate.window = sceneWindow
++
++        var options = appDelegate.launchOptions ?? [:]
++        if let context = connectionOptions.urlContexts.first {
++            options[.url] = context.url
++            options[.sourceApplication] = context.options.sourceApplication
++            options[.annotation] = context.options.annotation
++        }
++        if let activity = connectionOptions.userActivities.first(where: {
++            $0.activityType == NSUserActivityTypeBrowsingWeb
++        }) {
++            options[.userActivityDictionary] = [
++                UIApplication.LaunchOptionsKey.userActivityType.rawValue: activity.activityType,
++                "UIApplicationLaunchOptionsUserActivityKey": activity
++            ]
++        }
++        if let shortcut = connectionOptions.shortcutItem {
++            options[.shortcutItem] = shortcut
++        }
++        if let response = connectionOptions.notificationResponse,
++           response.notification.request.trigger is UNPushNotificationTrigger {
++            options[.remoteNotification] = response.notification.request.content.userInfo
++        }
++        factory.startReactNative(withModuleName: "Mattermost", in: sceneWindow, launchOptions: options)
++        PasteInputModule.setup(factory.rootViewFactory)
++
++        #if canImport(mattermost_intune)
++        IntuneAccess.checkAndRestoreEnrollmentOnLaunch()
++        #endif
++    }
++
++    func sceneDidBecomeActive(_ scene: UIScene) {
++        appDelegate?.applicationDidBecomeActive(UIApplication.shared)
++    }
++
++    func sceneWillResignActive(_ scene: UIScene) {
++        appDelegate?.applicationWillResignActive(UIApplication.shared)
++    }
++
++    func sceneWillEnterForeground(_ scene: UIScene) {
++        appDelegate?.applicationWillEnterForeground(UIApplication.shared)
++    }
++
++    func sceneDidEnterBackground(_ scene: UIScene) {
++        appDelegate?.applicationDidEnterBackground(UIApplication.shared)
++    }
++
++    func scene(_ scene: UIScene, openURLContexts contexts: Set<UIOpenURLContext>) {
++        for context in contexts {
++            var options: [UIApplication.OpenURLOptionsKey: Any] = [.openInPlace: context.options.openInPlace]
++            options[.sourceApplication] = context.options.sourceApplication
++            options[.annotation] = context.options.annotation
++            _ = appDelegate?.application(UIApplication.shared, open: context.url, options: options)
++        }
++    }
++
++    func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
++        _ = appDelegate?.application(UIApplication.shared, continue: userActivity, restorationHandler: { _ in })
++    }
++
++    func windowScene(_ windowScene: UIWindowScene, performActionFor shortcutItem: UIApplicationShortcutItem, completionHandler: @escaping (Bool) -> Void) {
++        guard let appDelegate else {
++            completionHandler(false)
++            return
++        }
++        appDelegate.application(UIApplication.shared, performActionFor: shortcutItem, completionHandler: completionHandler)
++    }
++}
++
+ // MARK: - ReactNativeDelegate
+ 
+ class ReactNativeDelegate: ExpoReactNativeFactoryDelegate {
+diff --git a/ios/Mattermost/Info.plist b/ios/Mattermost/Info.plist
+index fc3646e..3b3e6fe 100644
+--- a/ios/Mattermost/Info.plist
++++ b/ios/Mattermost/Info.plist
+@@ -3,17 +3,17 @@
+ <plist version="1.0">
+ <dict>
+ 	<key>AppGroupIdentifier</key>
+-	<string>group.com.mattermost.rnbeta</string>
++	<string>group.com.mattermost</string>
+ 	<key>BundleEntryFilename</key>
+ 	<string>index.js</string>
+ 	<key>CFBundleDevelopmentRegion</key>
+ 	<string>en</string>
+ 	<key>CFBundleDisplayName</key>
+-	<string>Mattermost Beta</string>
++	<string>Mattermost</string>
+ 	<key>CFBundleExecutable</key>
+ 	<string>$(EXECUTABLE_NAME)</string>
+ 	<key>CFBundleIdentifier</key>
+-	<string>com.mattermost.rnbeta</string>
++	<string>com.mattermost.rn</string>
+ 	<key>CFBundleInfoDictionaryVersion</key>
+ 	<string>6.0</string>
+ 	<key>CFBundleName</key>
+@@ -32,7 +32,7 @@
+ 			<key>CFBundleURLSchemes</key>
+ 			<array>
+ 				<string>mattermost</string>
+-				<string>mmauthbeta</string>
++				<string>mmauth</string>
+ 			</array>
+ 		</dict>
+ 	</array>
+@@ -81,6 +81,23 @@
+ 	</array>
+ 	<key>RCTNewArchEnabled</key>
+ 	<true/>
++	<key>UIApplicationSceneManifest</key>
++	<dict>
++		<key>UIApplicationSupportsMultipleScenes</key>
++		<false/>
++		<key>UISceneConfigurations</key>
++		<dict>
++			<key>UIWindowSceneSessionRoleApplication</key>
++			<array>
++				<dict>
++					<key>UISceneConfigurationName</key>
++					<string>Default Configuration</string>
++					<key>UISceneDelegateClassName</key>
++					<string>MattermostSceneDelegate</string>
++				</dict>
++			</array>
++		</dict>
++	</dict>
+ 	<key>UIAppFonts</key>
+ 	<array>
+ 		<string>OpenSans-Bold.ttf</string>
+diff --git a/ios/Mattermost/Mattermost.entitlements b/ios/Mattermost/Mattermost.entitlements
+index 522b100..838f924 100644
+--- a/ios/Mattermost/Mattermost.entitlements
++++ b/ios/Mattermost/Mattermost.entitlements
+@@ -24,11 +24,11 @@
+ 	<true/>
+ 	<key>com.apple.security.application-groups</key>
+ 	<array>
+-		<string>group.com.mattermost.rnbeta</string>
++		<string>group.com.mattermost</string>
+ 	</array>
+ 	<key>keychain-access-groups</key>
+ 	<array>
+-		<string>$(AppIdentifierPrefix)com.mattermost.rnbeta</string>
++		<string>$(AppIdentifierPrefix)com.mattermost.rn</string>
+ 	</array>
+ </dict>
+ </plist>
+diff --git a/ios/MattermostShare/Info.plist b/ios/MattermostShare/Info.plist
+index f1d3320..9a9723b 100644
+--- a/ios/MattermostShare/Info.plist
++++ b/ios/MattermostShare/Info.plist
+@@ -3,7 +3,7 @@
+ <plist version="1.0">
+ <dict>
+ 	<key>AppGroupIdentifier</key>
+-	<string>group.com.mattermost.rnbeta</string>
++	<string>group.com.mattermost</string>
+ 	<key>CFBundleDevelopmentRegion</key>
+ 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+ 	<key>CFBundleDisplayName</key>
+@@ -11,7 +11,7 @@
+ 	<key>CFBundleExecutable</key>
+ 	<string>$(EXECUTABLE_NAME)</string>
+ 	<key>CFBundleIdentifier</key>
+-	<string>com.mattermost.rnbeta.MattermostShare</string>
++	<string>com.mattermost.rn.MattermostShare</string>
+ 	<key>CFBundleInfoDictionaryVersion</key>
+ 	<string>6.0</string>
+ 	<key>CFBundleName</key>
+diff --git a/ios/MattermostShare/MattermostShare.entitlements b/ios/MattermostShare/MattermostShare.entitlements
+index cdeffc0..402a37e 100644
+--- a/ios/MattermostShare/MattermostShare.entitlements
++++ b/ios/MattermostShare/MattermostShare.entitlements
+@@ -6,7 +6,7 @@
+ 	<true/>
+ 	<key>com.apple.security.application-groups</key>
+ 	<array>
+-		<string>group.com.mattermost.rnbeta</string>
++		<string>group.com.mattermost</string>
+ 	</array>
+ </dict>
+ </plist>
+\ No newline at end of file
+diff --git a/ios/NotificationService/Info.plist b/ios/NotificationService/Info.plist
+index 71fa314..260fecf 100644
+--- a/ios/NotificationService/Info.plist
++++ b/ios/NotificationService/Info.plist
+@@ -3,7 +3,7 @@
+ <plist version="1.0">
+ <dict>
+ 	<key>AppGroupIdentifier</key>
+-	<string>group.com.mattermost.rnbeta</string>
++	<string>group.com.mattermost</string>
+ 	<key>CFBundleDevelopmentRegion</key>
+ 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+ 	<key>CFBundleDisplayName</key>
+diff --git a/ios/NotificationService/NotificationService.entitlements b/ios/NotificationService/NotificationService.entitlements
+index 55fdcde..de13a6d 100644
+--- a/ios/NotificationService/NotificationService.entitlements
++++ b/ios/NotificationService/NotificationService.entitlements
+@@ -4,7 +4,7 @@
+ <dict>
+ 	<key>com.apple.security.application-groups</key>
+ 	<array>
+-		<string>group.com.mattermost.rnbeta</string>
++		<string>group.com.mattermost</string>
+ 	</array>
+ </dict>
+ </plist>
+diff --git a/ios/Podfile.lock b/ios/Podfile.lock
+index 2295d65..1ad1eba 100644
+--- a/ios/Podfile.lock
++++ b/ios/Podfile.lock
+@@ -2536,7 +2536,7 @@ PODS:
+     - ReactCommon/turbomodule/core
+     - SocketRocket
+     - Yoga
+-  - react-native-network-client (1.11.2):
++  - react-native-network-client (1.11.4):
+     - Alamofire (~> 5.11.2)
+     - boost
+     - DoubleConversion
+@@ -2568,7 +2568,7 @@ PODS:
+     - Starscream (~> 4.0.8)
+     - SwiftyJSON (~> 5.0.2)
+     - Yoga
+-  - react-native-network-client-session-attributes (1.11.2)
++  - react-native-network-client-session-attributes (1.11.4)
+   - react-native-notifications (5.2.2):
+     - React-Core
+   - react-native-paste-input (2.0.1):
+@@ -4464,7 +4464,7 @@ SPEC CHECKSUMS:
+   fmt: 530618a01105dae0fa3a2f27c81ae11fa8f67eac
+   Gekidou: 9ac6db6670ad1377704998069c8a2f9e1a0ee2b4
+   glog: 5683914934d5b6e4240e497e0f4a3b42d1854183
+-  hermes-engine: 28814c9c9296d16aef26cb514de5378d18885e44
++  hermes-engine: f37e1d6f1eb198649a60b3f17b6f685a6ac12470
+   JitsiWebRTC: b47805ab5668be38e7ee60e2258f49badfe8e1d0
+   KituraContracts: e845e60dc8627ad0a76fa55ef20a45451d8f830b
+   libwebp: 02b23773aedb6ff1fd38cec7a77b81414c6842a8
+@@ -4477,7 +4477,7 @@ SPEC CHECKSUMS:
+   NitroBackgroundTimer: ca9c6ce4aace694da8dc082dbe202e14ae8b311c
+   NitroModules: d2038959f7d0a9bf7b6f87e9a7c18da8b13311ff
+   OpenGraph: 596722bb7f112d2dabcdb284cb817f01341a7540
+-  ratex-react-native: 11d24a2012f15ab1ec536dd3e04064c21ee4f9a4
++  ratex-react-native: 3c90093f49229b73a39a95dceb3c4be08403e8a4
+   RCT-Folly: b29feb752b08042c62badaef7d453f3bb5e6ae23
+   RCTDeprecation: c7d33f6bc08dbb8be7dfa70d219bfb034480a406
+   RCTRequired: 42b13c9504609bae9a9f65673a6b4fcbd8d07bd1
+@@ -4522,8 +4522,8 @@ SPEC CHECKSUMS:
+   react-native-image-picker: 6051cfd030121b880a58f1cc0e5e33e9887804e4
+   react-native-keyboard-controller: f8979f50dc2752ff5dc1656bd315d58cd6e78bba
+   react-native-netinfo: 9fad4eedfec9840a10e73ac4591ea1158523309b
+-  react-native-network-client: e50f0a63f14641be7b4c969df23f4bb70e437769
+-  react-native-network-client-session-attributes: b80d7492a3de9c2103e28b3839fe91ff6ce2375b
++  react-native-network-client: 3c34df49340d6de1ab8d236feaea29cbf25dde84
++  react-native-network-client-session-attributes: 3c66d94bb53a9e16ba0005ffecaab601f41007d3
+   react-native-notifications: e2d3c022d6077de7e420ba5c01b4bd9464f3941d
+   react-native-paste-input: 4b1423c882afacf39d7e2617e6c94835dcefaf39
+   react-native-performance: a7a65d0b0f3055c5db33e1433e4345143ef6a100
+diff --git a/ios/bundleReactNative.sh b/ios/bundleReactNative.sh
+index d9722fc..43da51b 100755
+--- a/ios/bundleReactNative.sh
++++ b/ios/bundleReactNative.sh
+@@ -1,7 +1,5 @@
+ #!/bin/sh
+ 
+-[[ -s $HOME/.nvm/nvm.sh ]] && . $HOME/.nvm/nvm.sh
+-
+ export NODE_OPTIONS=--max_old_space_size=12000
+ export BUNDLE_COMMAND="bundle"
+ export ENTRY_FILE="index.tsx"
