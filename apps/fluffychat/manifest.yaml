@@ -1,0 +1,12 @@
+id: fluffychat
+name: FluffyChat
+
+source:
+  license: AGPL-3.0-or-later
+  repository: https://github.com/krille-chan/fluffychat
+  version: v2.11.5
+  revision: 24fc707edf14cebe9d2a56c4b0d032ca2aee42b9
+
+build:
+  script: build.sh
+  deploymentTarget: "15.6"

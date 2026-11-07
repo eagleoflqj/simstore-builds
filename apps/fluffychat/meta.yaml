@@ -1,0 +1,5 @@
+description:
+  en: Exchange messages and make voice and video calls over Matrix.
+  zh-Hans: 通过 Matrix 收发消息并进行语音和视频通话。
+categories:
+  - communication
